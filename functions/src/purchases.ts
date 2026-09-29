@@ -27,6 +27,18 @@ const ENTITLED = new Set(["SUBSCRIPTION_STATE_ACTIVE", "SUBSCRIPTION_STATE_IN_GR
 
 export const premiumUntilOf = (s: SubscriptionInfo): number | null => (ENTITLED.has(s.state) ? s.expiryMs : null);
 
+const CLEARED = { premiumUntil: null, premiumToken: null };
+
+/** Fields to write for this token's state, or null for "no change": an expired token never wipes premium granted by a newer one. */
+function entitlementUpdate(
+  quota: Record<string, unknown> | undefined,
+  tokenHash: string,
+  until: number | null,
+): { premiumUntil: number | null; premiumToken: string | null } | null {
+  if (until !== null) return { premiumUntil: until, premiumToken: tokenHash };
+  return quota?.premiumToken === tokenHash ? CLEARED : null;
+}
+
 export async function handleVerifyPurchase(
   input: Record<string, unknown>,
   deps: PurchaseDeps,
@@ -44,15 +56,18 @@ export async function handleVerifyPurchase(
   }
   const until = premiumUntilOf(sub);
   const { db, now } = deps;
-  const purchaseRef = db.doc(`purchases/${sha256(token)}`);
+  const tokenHash = sha256(token);
+  const purchaseRef = db.doc(`purchases/${tokenHash}`);
   const quotaRef = db.doc(`quota/${key}`);
 
   await db.runTransaction(async (tx) => {
-    const [purchase, quota] = await Promise.all([tx.get(purchaseRef), tx.get(quotaRef)]);
+    const purchase = await tx.get(purchaseRef);
     const prevKey = purchase.get("deviceKey") as string | undefined;
-    // One token, one device: restoring on a new phone moves premium off the old one.
-    if (prevKey && prevKey !== key) tx.set(db.doc(`quota/${prevKey}`), { premiumUntil: null }, { merge: true });
-    tx.set(quotaRef, { ...normalize(quota.data(), now), premiumUntil: until });
+    const prevRef = prevKey && prevKey !== key ? db.doc(`quota/${prevKey}`) : null;
+    const [quota, prev] = await Promise.all([tx.get(quotaRef), prevRef ? tx.get(prevRef) : undefined]);
+    // One token, one device: restoring on a new phone moves premium off the old one (only if it still holds this token).
+    if (prevRef && prev?.get("premiumToken") === tokenHash) tx.set(prevRef, CLEARED, { merge: true });
+    tx.set(quotaRef, { ...normalize(quota.data(), now), ...entitlementUpdate(quota.data(), tokenHash, until) });
     tx.set(purchaseRef, { deviceKey: key });
   });
 
@@ -68,9 +83,16 @@ export async function handleRtdn(
   const token = (message as { subscriptionNotification?: { purchaseToken?: string } } | null)
     ?.subscriptionNotification?.purchaseToken;
   if (!token) return "ignored";
-  const purchase = await deps.db.doc(`purchases/${sha256(token)}`).get();
-  if (!purchase.exists) return "unknown";
+  const tokenHash = sha256(token);
   const until = premiumUntilOf(await deps.play.getSubscription(token));
-  await deps.db.doc(`quota/${purchase.get("deviceKey")}`).set({ premiumUntil: until }, { merge: true });
-  return "updated";
+  const purchaseRef = deps.db.doc(`purchases/${tokenHash}`);
+  return deps.db.runTransaction(async (tx) => {
+    const purchase = await tx.get(purchaseRef);
+    if (!purchase.exists) return "unknown";
+    const quotaRef = deps.db.doc(`quota/${purchase.get("deviceKey")}`);
+    const quota = await tx.get(quotaRef);
+    const update = entitlementUpdate(quota.data(), tokenHash, until);
+    if (update) tx.set(quotaRef, update, { merge: true });
+    return "updated";
+  });
 }

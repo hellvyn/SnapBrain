@@ -60,6 +60,40 @@ describe("handleVerifyPurchase", () => {
   });
 });
 
+describe("premium token ownership", () => {
+  it("an expired old token does not wipe premium from a newer token", async () => {
+    const dev = newDeviceId();
+    const t1 = randomUUID();
+    await verifyP(dev, t1);
+    await verifyP(dev, randomUUID(), fakePlay({ expiryMs: NOW + 60 * DAY }));
+    const msg = { subscriptionNotification: { purchaseToken: t1 } };
+    expect(await handleRtdn(msg, { db, play: fakePlay({ state: "SUBSCRIPTION_STATE_EXPIRED" }) })).toBe("updated");
+    expect(await premiumOf(dev)).toBe(NOW + 60 * DAY);
+  });
+
+  it("RTDN after a move only touches the linked device", async () => {
+    const a = newDeviceId();
+    const b = newDeviceId();
+    const token = randomUUID();
+    await verifyP(a, token);
+    await verifyP(b, token);
+    await handleRtdn({ subscriptionNotification: { purchaseToken: token } }, { db, play: fakePlay() });
+    expect(await premiumOf(a)).toBeNull();
+    expect(await premiumOf(b)).toBe(NOW + 30 * DAY);
+  });
+
+  it.each([
+    ["SUBSCRIPTION_STATE_CANCELED", NOW + 30 * DAY],
+    ["SUBSCRIPTION_STATE_IN_GRACE_PERIOD", NOW + 30 * DAY],
+    ["SUBSCRIPTION_STATE_ON_HOLD", null],
+    ["SUBSCRIPTION_STATE_PENDING", null],
+  ])("%s grants %s", async (state, expected) => {
+    const dev = newDeviceId();
+    expect(await verifyP(dev, randomUUID(), fakePlay({ state }))).toEqual({ premium_until: expected });
+    expect(await premiumOf(dev)).toBe(expected);
+  });
+});
+
 describe("handleRtdn", () => {
   it("updates the linked device from Play", async () => {
     const dev = newDeviceId();
