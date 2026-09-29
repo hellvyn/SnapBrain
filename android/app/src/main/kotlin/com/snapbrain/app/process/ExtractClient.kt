@@ -15,6 +15,8 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.time.LocalDate
+import java.time.ZoneId
 
 class ExtractClient(private val deviceId: String, private val baseUrl: String) {
     suspend fun extract(itemId: String, ocrText: String): ExtractOutcome = try {
@@ -26,7 +28,13 @@ class ExtractClient(private val deviceId: String, private val baseUrl: String) {
             ExtractOutcome.Retryable
         } else {
             val body = JSONObject(
-                mapOf("ocr_text" to truncateForApi(ocrText), "device_id" to deviceId, "item_id" to itemId),
+                mapOf(
+                    "ocr_text" to truncateForApi(ocrText),
+                    "device_id" to deviceId,
+                    "item_id" to itemId,
+                    "today" to LocalDate.now().toString(),
+                    "tz" to ZoneId.systemDefault().id,
+                ),
             ).toString()
             val (code, text) = withContext(Dispatchers.IO) { post("$baseUrl/extract", body, idToken, appCheck) }
             if (code in 200..299) {

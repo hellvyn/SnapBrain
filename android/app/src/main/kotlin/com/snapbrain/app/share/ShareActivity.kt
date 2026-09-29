@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.IntentCompat
+import com.snapbrain.app.data.actionList
 import com.snapbrain.app.SnapBrainApp
 import com.snapbrain.app.data.ItemEntity
 import com.snapbrain.app.data.ItemRepository
@@ -44,7 +45,6 @@ import com.snapbrain.app.ui.SnapBrainTheme
 import com.snapbrain.app.ui.perform
 import com.snapbrain.core.ExtractJson
 import com.snapbrain.core.ItemStatus
-import com.snapbrain.core.actionOf
 import com.snapbrain.core.canDeleteOriginal
 import com.snapbrain.core.categoryLabel
 import kotlinx.coroutines.CancellationException
@@ -158,7 +158,7 @@ private fun ShareSheet(uri: Uri, repository: ItemRepository, onClose: () -> Unit
                     Text(categoryLabel(item.category), style = MaterialTheme.typography.labelMedium)
                     Text(item.title ?: "Screenshot tersimpan", style = MaterialTheme.typography.titleLarge)
                     ExtractJson.decodeInfo(item.extractedInfo).entries.take(2).forEach { (k, v) -> Text("$k: $v") }
-                    actionOf(item.actionType, item.actionPayload)?.let { action ->
+                    item.actionList().firstOrNull()?.let { action ->
                         OutlinedButton(onClick = { context.perform(action) }) { Text(action.label) }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

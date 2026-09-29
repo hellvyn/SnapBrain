@@ -46,12 +46,12 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.size.Size
+import com.snapbrain.app.data.actionList
 import com.snapbrain.app.data.ItemEntity
 import com.snapbrain.app.data.ItemRepository
 import com.snapbrain.app.process.ProcessWorker
 import com.snapbrain.core.ExtractJson
 import com.snapbrain.core.ItemStatus
-import com.snapbrain.core.actionOf
 import com.snapbrain.core.categoryLabel
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -121,7 +121,7 @@ fun DetailScreen(id: String, repository: ItemRepository, onBack: () -> Unit) {
                     Text(value, modifier = Modifier.weight(0.6f))
                 }
             }
-            actionOf(current.actionType, current.actionPayload)?.let { action ->
+            current.actionList().firstOrNull()?.let { action ->
                 item { OutlinedButton(onClick = { context.perform(action) }) { Text(action.label) } }
             }
             if (tasks.isNotEmpty()) {

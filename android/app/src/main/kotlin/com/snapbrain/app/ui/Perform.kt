@@ -18,6 +18,10 @@ fun Context.perform(action: Action) {
             .setData(CalendarContract.Events.CONTENT_URI)
             .putExtra(CalendarContract.Events.TITLE, action.title)
             .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, action.beginMillis)
+        is Action.OpenMaps -> Intent(Intent.ACTION_VIEW, Uri.parse(action.geoUri))
+        is Action.WhatsApp -> Intent(Intent.ACTION_VIEW, Uri.parse(action.url))
+        is Action.Call -> Intent(Intent.ACTION_DIAL, Uri.parse("tel:${action.number}"))
+        is Action.SearchProduct -> Intent(Intent.ACTION_VIEW, Uri.parse(action.url))
         is Action.CopyText -> {
             getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("SnapBrain", action.text))
             Toast.makeText(this, "Disalin", Toast.LENGTH_SHORT).show()

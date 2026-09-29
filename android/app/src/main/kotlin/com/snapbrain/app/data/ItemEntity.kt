@@ -1,5 +1,6 @@
 package com.snapbrain.app.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -18,4 +19,7 @@ data class ItemEntity(
     val tasks: String? = null, // JSON array, see ExtractJson
     val tasksTotal: Int = 0,
     val attempts: Int = 0,
+    val actions: String? = null, // JSON array of ActionData, see ExtractJson; null on items stored before v2
+    val activation: String? = null,
+    @ColumnInfo(defaultValue = "0") val active: Boolean = false,
 )

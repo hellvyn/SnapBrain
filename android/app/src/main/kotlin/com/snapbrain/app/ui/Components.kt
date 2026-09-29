@@ -23,9 +23,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.snapbrain.app.data.actionList
 import com.snapbrain.app.data.ItemEntity
 import com.snapbrain.core.ItemStatus
-import com.snapbrain.core.actionOf
 import com.snapbrain.core.categoryLabel
 import java.io.File
 import java.text.DateFormat
@@ -64,7 +64,7 @@ fun SmartCard(item: ItemEntity, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis,
                 )
                 statusText(item)?.let { Text(it, style = MaterialTheme.typography.labelSmall) }
-                actionOf(item.actionType, item.actionPayload)?.let { action ->
+                item.actionList().firstOrNull()?.let { action ->
                     OutlinedButton(onClick = { context.perform(action) }) { Text(action.label) }
                 }
             }

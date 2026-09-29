@@ -13,9 +13,10 @@ class AppContainer(context: Context) {
     private val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID).orEmpty()
 
     val repository = ItemRepository(
-        dao = AppDatabase.create(context).itemDao(),
+        db = AppDatabase.create(context),
         images = ImageStore(context),
         ocr = OcrEngine(context),
         client = ExtractClient(deviceIdOf(androidId), BuildConfig.API_BASE_URL),
+        prefs = context.getSharedPreferences("snapbrain", Context.MODE_PRIVATE),
     )
 }
