@@ -2,7 +2,7 @@
 
 Artifact CI hanya terhubung ke backend asli jika repo secret `GOOGLE_SERVICES_JSON` (isi google-services.json asli) sudah diisi di GitHub → Settings → Secrets and variables → Actions. Tanpa secret itu APK dibangun dengan konfigurasi dummy dan setiap panggilan AI gagal.
 
-Prasyarat: backend sudah di-deploy (docs/backend-ops.md). Token debug App Check sudah didaftarkan: jalankan app sekali, cari "DebugAppCheckProvider" di logcat, lalu tempel token-nya di Firebase Console → App Check → Manage debug tokens. Tanpa backend, item tampil "Menunggu internet" dan berubah menjadi "Gagal, coba lagi" setelah 5 percobaan.
+Prasyarat: backend Cloudflare sudah di-deploy dan secret Worker diisi (docs/cloudflare-ops.md langkah 1–8). Token debug App Check sudah didaftarkan: jalankan app sekali, cari "DebugAppCheckProvider" di logcat, lalu tempel token-nya di Firebase Console → App Check → Manage debug tokens. Tanpa backend, item tampil "Menunggu internet" dan berubah menjadi "Gagal, coba lagi" setelah 5 percobaan.
 
 1. Buka SnapBrain. Inbox kosong menampilkan "Belum ada screenshot...".
 2. Galeri → pilih screenshot struk transfer → Share → SnapBrain. Sheet muncul, lalu tampil "Mengekstrak teks..." dan "AI sedang menganalisis konteks...". Hasil tampil dengan kategori 💰 Keuangan dan tombol Salin/aksi.
@@ -10,7 +10,7 @@ Prasyarat: backend sudah di-deploy (docs/backend-ops.md). Token debug App Check 
 4. Share dari WhatsApp. Hanya tombol "Simpan" dan "Batal" yang muncul.
 5. Mode pesawat → share screenshot. Muncul "Tersimpan. Akan diproses otomatis saat online.". Matikan mode pesawat. Dalam beberapa menit item di Inbox berubah dari "⏳ Menunggu internet" menjadi hasil AI.
 6. Share lalu tutup sheet. Ditutup saat "Mengekstrak teks..." maupun "AI sedang menganalisis", item tetap tersimpan dan diproses oleh worker (hasilnya muncul di Inbox tanpa perlu membuka ulang app).
-7. Share foto tanpa teks. Langsung tersimpan sebagai 📄 Lainnya, dan kuota tidak berkurang: cek di Firestore `quota/{deviceKey}.used` (Firebase Console), nilainya tidak naik.
+7. Share foto tanpa teks. Langsung tersimpan sebagai 📄 Lainnya, dan kuota tidak berkurang: cek di Cloudflare Dashboard → D1 → `snapbrain` → Console: `SELECT used FROM quota;`, nilainya tidak naik.
 8. Search nomor resi sebagian (misal 4 digit terakhir). Item yang cocok muncul. Chip "Belanja" memfilter kategori.
 9. Detail: pinch-zoom gambar, centang task, lalu buka ulang app. Centang task tersimpan.
 10. Tombol aksi: "Lacak Paket" membuka pencarian, "Tambah ke Kalender" membuka form kalender, "Buka Link" membuka browser.
