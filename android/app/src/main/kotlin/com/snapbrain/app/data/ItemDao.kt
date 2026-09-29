@@ -35,6 +35,9 @@ interface ItemDao {
     @Update
     suspend fun update(item: ItemEntity)
 
+    @Query("UPDATE item SET active = :active WHERE id = :id")
+    suspend fun setActive(id: String, active: Boolean)
+
     @Query("DELETE FROM item WHERE id = :id")
     suspend fun delete(id: String)
 }

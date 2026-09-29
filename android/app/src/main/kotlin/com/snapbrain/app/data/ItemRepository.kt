@@ -5,12 +5,14 @@ import android.net.Uri
 import androidx.room.withTransaction
 import com.snapbrain.app.process.ExtractClient
 import com.snapbrain.app.process.OcrEngine
+import com.snapbrain.core.CompareColumn
 import com.snapbrain.core.ExtractData
 import com.snapbrain.core.ExtractJson
 import com.snapbrain.core.ExtractOutcome
 import com.snapbrain.core.ExtractResponse
 import com.snapbrain.core.ItemStatus
 import com.snapbrain.core.Quota
+import com.snapbrain.core.activatesBelanja
 import com.snapbrain.core.needsAi
 import com.snapbrain.core.normalized
 import com.snapbrain.core.statusAfter
@@ -36,10 +38,18 @@ class ItemRepository(
     /** Last quota the server reported; null until the first successful extract. */
     val quota: StateFlow<Quota?> = _quota
 
+    private val _budget = MutableStateFlow(prefs.getLong(BUDGET, 0L))
+
+    /** Monthly shopping budget in rupiah; 0 means not set (spec §8). */
+    val budget: StateFlow<Long> = _budget
+
     fun observe(query: String, category: String?) = dao.observe(query.trim(), category)
     fun observe(id: String) = dao.observeById(id)
     fun observeLists(id: String) = lists.observe(id)
     fun observeProgress() = lists.observeProgress()
+    fun observeBelanja() = lists.observeBelanja()
+    fun observeTodo() = lists.observeTodo()
+    fun observeSpent(since: Long) = lists.observeSpent(since)
 
     /** Saves the screenshot locally before any network call, so nothing is lost offline. */
     suspend fun capture(uri: Uri): ItemEntity = withContext(Dispatchers.IO) {
@@ -116,9 +126,39 @@ class ItemRepository(
 
     suspend fun toggleListItem(id: Long) = lists.toggle(id, System.currentTimeMillis())
 
+    suspend fun setChecked(ids: List<Long>, checked: Boolean) = lists.setChecked(ids, checked, System.currentTimeMillis())
+
+    suspend fun finishShopping() = lists.finishShopping()
+
+    fun setBudget(amount: Long) {
+        prefs.edit().putLong(BUDGET, amount).apply()
+        _budget.value = amount
+    }
+
+    /** Spec §8: activating masak/beli puts the shopping rows in Belanja; deactivating takes back the unchecked ones. */
+    suspend fun setActive(id: String, active: Boolean) {
+        val item = dao.get(id) ?: return
+        db.withTransaction {
+            dao.setActive(id, active)
+            when {
+                !active -> lists.removeFromBelanja(id)
+                activatesBelanja(item.activation) -> lists.addToBelanja(id)
+            }
+        }
+    }
+
+    /** One column per screenshot: the first priced shopping row stands for the product. */
+    suspend fun compareColumns(ids: List<String>): List<CompareColumn> = ids.mapNotNull { id ->
+        val item = dao.get(id) ?: return@mapNotNull null
+        val rows = lists.rowsFor(id).filter { it.role == "belanja" }
+        val main = rows.firstOrNull { it.price > 0 } ?: rows.firstOrNull()
+        CompareColumn(item.title ?: "Screenshot", main?.price ?: 0, main?.size, ExtractJson.decodeInfo(item.extractedInfo))
+    }
+
     private companion object {
         const val QUOTA_USED = "quota_used"
         const val QUOTA_LIMIT = "quota_limit"
+        const val BUDGET = "budget_month"
     }
 
     private suspend fun retryLater(item: ItemEntity): ItemEntity {

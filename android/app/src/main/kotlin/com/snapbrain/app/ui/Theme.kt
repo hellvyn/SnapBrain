@@ -62,6 +62,10 @@ fun SnapBrainTheme(content: @Composable () -> Unit) {
 val soonColor: Color
     @Composable get() = if (isSystemInDarkTheme()) Color(0xFFFFB86B) else Color(0xFFB4530F)
 
+/** Filled buttons: dark primary is a light blue meant for text, so filled buttons keep a darker blue under white text. */
+val strongButtonColor: Color
+    @Composable get() = if (isSystemInDarkTheme()) Color(0xFF4262E8) else MaterialTheme.colorScheme.primary
+
 /** A white card with a soft shadow in light mode, a bordered card in dark mode. */
 @Composable
 fun SnapCard(

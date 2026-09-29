@@ -2,7 +2,6 @@ package com.snapbrain.app.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
@@ -82,11 +81,15 @@ import com.snapbrain.app.data.actionList
 import com.snapbrain.app.process.ProcessWorker
 import com.snapbrain.core.Action
 import com.snapbrain.core.ExtractJson
+import com.snapbrain.core.IS_PRO
 import com.snapbrain.core.ItemStatus
 import com.snapbrain.core.ShareList
 import com.snapbrain.core.TaskItem
+import com.snapbrain.core.activatesBelanja
+import com.snapbrain.core.activationLabel
 import com.snapbrain.core.dueLabel
 import com.snapbrain.core.shareText
+import com.snapbrain.core.todoEligible
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.io.File
@@ -118,6 +121,10 @@ fun DetailScreen(id: String, repository: ItemRepository, onBack: () -> Unit) {
     val legacyTasks = if (rows.isEmpty()) ExtractJson.decodeTasks(current.tasks) else emptyList()
     val actions = current.actionList()
     val now = LocalDateTime.now()
+    // Spec §6.3/S7: the button only shows when its rows have somewhere to land.
+    val toBelanja = activatesBelanja(current.activation) && rows.any { it.role == "belanja" }
+    val toTodo = rows.any { todoEligible(it.role, it.kind) }
+    val activation = if (IS_PRO) activationLabel(current.activation, current.active, toBelanja, toTodo) else null
 
     Scaffold(
         topBar = {
@@ -154,9 +161,11 @@ fun DetailScreen(id: String, repository: ItemRepository, onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item {
-                HeroCard(current, style, title, onRetry = {
-                    scope.launch { repository.retry(id); ProcessWorker.enqueue(context.applicationContext) }
-                })
+                HeroCard(
+                    current, style, title, activation,
+                    onActivate = { scope.launch { repository.setActive(id, !current.active) } },
+                    onRetry = { scope.launch { repository.retry(id); ProcessWorker.enqueue(context.applicationContext) } },
+                )
             }
             item {
                 // Spec S15: the screenshot stays hidden until asked for.
@@ -187,7 +196,7 @@ fun DetailScreen(id: String, repository: ItemRepository, onBack: () -> Unit) {
 private fun List<ListItemEntity>.toShareList() = ShareList(first().listTitle, first().kind == "steps", map { it.text to it.checked })
 
 @Composable
-private fun HeroCard(item: ItemEntity, style: CategoryStyle, title: String, onRetry: () -> Unit) {
+private fun HeroCard(item: ItemEntity, style: CategoryStyle, title: String, activation: String?, onActivate: () -> Unit, onRetry: () -> Unit) {
     SnapCard(Modifier.fillMaxWidth(), color = style.tile) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -200,9 +209,26 @@ private fun HeroCard(item: ItemEntity, style: CategoryStyle, title: String, onRe
             Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
             statusText(item)?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = statusColor(item)) }
             if (item.status == ItemStatus.FAILED.name) {
-                // Dark primary is a light blue for text buttons; the filled button keeps the spec's dark blue.
-                val container = if (isSystemInDarkTheme()) Color(0xFF4262E8) else MaterialTheme.colorScheme.primary
-                Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = container, contentColor = Color.White)) { Text("Coba lagi") }
+                Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = strongButtonColor, contentColor = Color.White)) { Text("Coba lagi") }
+            }
+            if (activation != null) {
+                val shape = RoundedCornerShape(16.dp)
+                val modifier = Modifier.fillMaxWidth().height(52.dp)
+                if (item.active) {
+                    OutlinedButton(
+                        onClick = onActivate,
+                        modifier = modifier,
+                        shape = shape,
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
+                    ) { Text(activation, fontWeight = FontWeight.ExtraBold) }
+                } else {
+                    Button(
+                        onClick = onActivate,
+                        modifier = modifier,
+                        shape = shape,
+                        colors = ButtonDefaults.buttonColors(containerColor = strongButtonColor, contentColor = Color.White),
+                    ) { Text(activation, fontWeight = FontWeight.ExtraBold) }
+                }
             }
         }
     }
