@@ -28,21 +28,22 @@ class MainActivity : ComponentActivity() {
                         ProcessWorker.enqueue(applicationContext)
                     }
                 }
+                var showSplash by rememberSaveable { mutableStateOf(freshStart) }
                 var openId by rememberSaveable { mutableStateOf<String?>(null) }
                 var query by rememberSaveable { mutableStateOf("") }
                 var category by rememberSaveable { mutableStateOf<String?>(null) }
                 val listState = rememberLazyListState()
                 val id = openId
-                if (id == null) {
-                    InboxScreen(
+                when {
+                    showSplash -> SplashScreen(onDone = { showSplash = false })
+                    id == null -> InboxScreen(
                         repository,
                         query, { query = it },
                         category, { category = it },
                         listState,
                         onOpen = { openId = it },
                     )
-                } else {
-                    DetailScreen(id, repository, onBack = { openId = null })
+                    else -> DetailScreen(id, repository, onBack = { openId = null })
                 }
             }
         }

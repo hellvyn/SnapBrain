@@ -2,6 +2,7 @@
 <resources>
     <style name="Theme.SnapBrain" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:windowSplashScreenBackground">@color/window_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
     </style>
-    <style name="Theme.SnapBrain.Translucent" parent="android:Theme.Translucent.NoTitleBar" />
 </resources>
