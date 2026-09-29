@@ -1,0 +1,23 @@
+{
+  "name": "snapbrain-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "triggers": { "crons": ["0 18 * * *"] },
+  "d1_databases": [
+    // database_id is filled in by CI from the GitHub variable D1_DATABASE_ID.
+    { "binding": "DB", "database_name": "snapbrain", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "migrations" }
+  ],
+  "vars": {
+    "LIMIT_FREE": "15",
+    "LIMIT_PREMIUM": "300",
+    "REWARD_AMOUNT": "3",
+    "REWARD_MAX_PER_DAY": "3",
+    "LLM_BASE_URL": "https://freellm.hellvyn.id/v1",
+    "LLM_MODEL": "auto",
+    "FIREBASE_PROJECT_ID": "snapbrain-hellvyn",
+    "FIREBASE_PROJECT_NUMBER": "472964840390",
+    "PACKAGE_NAME": "com.snapbrain.app",
+    "ADMOB_AD_UNIT_ID": ""
+  }
+}

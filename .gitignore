@@ -7,3 +7,5 @@ android/**/build/
 android/**/.gradle/
 android/**/.kotlin/
 android/local.properties
+worker/node_modules/
+worker/.wrangler/
