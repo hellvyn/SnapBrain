@@ -25,7 +25,7 @@
 
 | # | Keputusan | Alasan |
 |---|---|---|
-| S1 | Kerjakan A → B → C berurutan. Tiap fase punya rencana kerja sendiri dan dites di perangkat sebelum fase berikutnya | B dan C bergantung pada data A. Kesalahan terlacak per fase |
+| S1 | Kerjakan A → B → C berurutan. Tiap fase punya rencana kerja sendiri dan dites di perangkat sebelum fase berikutnya. **Diubah 29 Sep:** atas permintaan pengguna, B dan C dibangun dalam satu rencana tanpa menunggu tes perangkat A; A+B+C dites sekaligus | B dan C bergantung pada data A. Kesalahan terlacak per fase |
 | S2 | Satu bentuk generik untuk semua kategori: `info` + `lists` + `actions`. Penyesuaian per kategori lewat instruksi AI saja | Satu tampilan untuk semua kategori. Skema sedikit = model ringan lebih jarang salah format |
 | S3 | Checklist penuh untuk semua pengguna. Pemotongan "free hanya 1 task" dan `tasks_total` dihapus | Checklist terpotong membuat pengguna gratis tidak pernah merasakan nilai app |
 | S4 | Pembeda Pro: kuota 300/bulan, bebas iklan, dan fitur Fase C. Fase B (pengingat) gratis | Pengingat menjaga retensi. Kunci Pro baru aktif setelah Rencana 3 (billing); sampai saat itu Fase C terbuka untuk semua |
