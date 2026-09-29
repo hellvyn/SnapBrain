@@ -49,12 +49,13 @@ export function createApp(o: Overrides = {}) {
     if (req.method === "POST" && (url.pathname === "/extract" || url.pathname === "/verify-purchase")) {
       await verifyRequest(req.headers, project, o.keys ?? googleKeys());
       if (!env.DEVICE_SALT) throw new ApiError("unavailable", "DEVICE_SALT not set");
-      const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+      const body = (await req.json().catch(() => ({}))) as unknown;
+      if (typeof body !== "object" || body === null || Array.isArray(body)) throw new ApiError("invalid-argument", "body");
       if (url.pathname === "/extract") {
         if (!env.LLM_API_KEY) throw new ApiError("unavailable", "LLM_API_KEY not set");
-        return json(await handleExtract(body, { db: env.DB, extract: extractorOf(env), salt: env.DEVICE_SALT, limits: limitsOf(env), now: now() }));
+        return json(await handleExtract(body as Record<string, unknown>, { db: env.DB, extract: extractorOf(env), salt: env.DEVICE_SALT, limits: limitsOf(env), now: now() }));
       }
-      return json(await handleVerifyPurchase(body, { db: env.DB, play: (o.play ?? playOf)(env), salt: env.DEVICE_SALT, now: now() }));
+      return json(await handleVerifyPurchase(body as Record<string, unknown>, { db: env.DB, play: (o.play ?? playOf)(env), salt: env.DEVICE_SALT, now: now() }));
     }
     return json({ error: "NOT_FOUND" }, 404);
   }
@@ -78,6 +79,6 @@ const app = createApp();
 export default {
   fetch: (req: Request, env: Env) => app.fetch(req, env),
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(runDaily({ db: env.DB, play: playOf(env), now: Date.now() }).then((r) => console.log(JSON.stringify(r))));
+    ctx.waitUntil(runDaily({ db: env.DB, play: playOf(env), now: Date.now() }).then((r) => console.log(JSON.stringify(r))).catch((e: unknown) => console.error(JSON.stringify({ cron: "daily", error: e instanceof Error ? e.name : "unknown" }))));
   },
 } satisfies ExportedHandler<Env>;

@@ -50,6 +50,9 @@ describe("router", () => {
   it("maps invalid input to 400 and unknown routes to 404", async () => {
     const bad = await extract(withSecrets, { ocr_text: "", device_id: "x", item_id: "y" });
     expect(bad.status).toBe(400);
+    const nullBody = await extract(withSecrets, null);
+    expect(nullBody.status).toBe(400);
+    expect(await nullBody.json()).toEqual({ error: "INVALID_ARGUMENT" });
     expect((await app.fetch(new Request("https://w/nope"), withSecrets)).status).toBe(404);
   });
 });

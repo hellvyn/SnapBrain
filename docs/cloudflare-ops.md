@@ -2,7 +2,7 @@
 
 Semua langkah gratis dan tidak butuh kartu.
 
-1. **Akun Cloudflare:** daftar di https://dash.cloudflare.com/sign-up.
+1. **Akun Cloudflare:** daftar di https://dash.cloudflare.com/sign-up. Buka **Workers & Pages** sekali; jika diminta, pilih subdomain `*.workers.dev` gratis.
 2. **Database D1:** Dashboard → Storage & Databases → D1 → Create → nama `snapbrain`. Salin **Database ID**.
 3. **API token:** My Profile → API Tokens → Create Token → template **"Edit Cloudflare Workers"** → tambahkan permission **Account · D1 · Edit** → Create. Salin token-nya (hanya muncul sekali). **Account ID** ada di halaman Workers & Pages (kolom kanan).
 4. **GitHub** (repo → Settings → Secrets and variables → Actions):
@@ -12,8 +12,8 @@ Semua langkah gratis dan tidak butuh kartu.
 6. **Secret Worker:** Dashboard → Workers & Pages → `snapbrain-api` → Settings → Variables and Secrets → Add → type **Secret**:
    - `LLM_API_KEY` = key dari dashboard freellm.
    - `DEVICE_SALT` = teks acak panjang (misalnya 40 karakter campuran). **Jangan pernah diganti** setelah rilis, karena semua kuota akan ter-reset.
-7. **URL Worker:** tertulis di halaman Worker, bentuknya `https://snapbrain-api.<subdomain>.workers.dev`. Simpan di GitHub **Variables** sebagai `SNAPBRAIN_API_URL`. Build APK di CI memakainya.
+7. **URL Worker:** tertulis di halaman Worker, bentuknya `https://snapbrain-api.<subdomain>.workers.dev`. Simpan di GitHub **Variables** sebagai `SNAPBRAIN_API_URL`. Aplikasi Android memakainya setelah update app (task berikutnya) masuk; build APK di CI membaca variabel ini.
 8. **Firebase Console (plan Spark, gratis):** Authentication → Sign-in method → **Anonymous** → Enable. App Check → daftarkan app Android dengan Play Integrity. Untuk APK debug, pakai **Manage debug tokens**.
 9. **Opsional:**
-   - Var `LLM_MODEL` (default `auto`), dan limit kuota. Bisa diubah di halaman yang sama dengan langkah 6, tanpa rilis app.
-   - `ADMOB_AD_UNIT_ID` dan secret `PLAY_SERVICE_ACCOUNT_JSON` baru dibutuhkan di Rencana 3.
+   - `LLM_MODEL` (default `auto`), limit kuota, dan `ADMOB_AD_UNIT_ID` adalah `vars` di `worker/wrangler.jsonc`. Setiap deploy CI menimpanya, jadi jangan diubah lewat dashboard. Ubah di `worker/wrangler.jsonc` lalu merge ke `main` (atau minta Claude yang mengubahnya).
+   - Hanya secret yang diisi lewat dashboard: `LLM_API_KEY`, `DEVICE_SALT`, dan `PLAY_SERVICE_ACCOUNT_JSON` (baru dibutuhkan di Rencana 3).
