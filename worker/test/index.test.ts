@@ -5,7 +5,7 @@ import { createApp } from "../src/index";
 import type { ExtractData } from "../src/schema";
 import { newDeviceId } from "./helpers";
 
-const DATA: ExtractData = { category: "task", title: "x", extracted_info: {}, action_type: "none", action_payload: "", tasks: [] };
+const DATA: ExtractData = { category: "task", title: "x", info: {}, lists: [], actions: [], activation: "none" };
 let headers: Record<string, string>;
 let app: ReturnType<typeof createApp>;
 
@@ -27,10 +27,12 @@ const extract = (e: typeof env, body: unknown, h = headers) =>
 const withSecrets = { ...env, LLM_API_KEY: "k", DEVICE_SALT: "s" };
 
 describe("router", () => {
-  it("serves /extract with the v1 response shape", async () => {
+  it("serves /extract with the v2 response shape", async () => {
     const res = await extract(withSecrets, { ocr_text: "Kerjakan laporan", device_id: newDeviceId(), item_id: crypto.randomUUID() });
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ data: { category: "task" }, tasks_total: 0, quota: { used: 1, limit: 15 } });
+    const body = await res.json();
+    expect(body).toMatchObject({ data: { category: "task", lists: [] }, quota: { used: 1, limit: 1000 } });
+    expect(body).not.toHaveProperty("tasks_total");
   });
 
   it("answers 503 UNAVAILABLE when secrets are missing", async () => {

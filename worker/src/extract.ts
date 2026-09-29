@@ -1,13 +1,34 @@
 import { ensureRows, loadQuota } from "./db";
 import { deviceKey } from "./device";
 import { ApiError } from "./errors";
-import { type ExtractFn, LlmUnavailable } from "./llm";
+import { type DateContext, type ExtractFn, LlmUnavailable } from "./llm";
 import { hasQuota, isPremium, limitOf, normalize, type QuotaLimits } from "./quota";
-import { type ExtractData, trimForTier } from "./schema";
+import { type ExtractData, validDue } from "./schema";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const MAX_CHARS = 20_000;
 const CHARGE_TTL_MS = 40 * 24 * 60 * 60 * 1000;
+
+const TIME_ZONE = /^[A-Za-z_]+(?:\/[A-Za-z0-9_+-]+)*$/;
+const FALLBACK_TZ = "Asia/Jakarta";
+
+function isTimeZone(tz: unknown): tz is string {
+  if (typeof tz !== "string" || tz.length > 64 || !TIME_ZONE.test(tz)) return false;
+  try {
+    new Intl.DateTimeFormat("en-CA", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** The device's day and zone. Missing or bad values fall back to Jakarta instead of refusing the request. */
+export function dateContextOf(input: Record<string, unknown>, now: number): DateContext {
+  const tz = isTimeZone(input.tz) ? input.tz : FALLBACK_TZ;
+  const sent = typeof input.today === "string" && input.today.length === 10 ? validDue(input.today) : null;
+  const today = sent ?? new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  return { today, tz };
+}
 
 export interface ExtractDeps {
   db: D1Database;
@@ -19,7 +40,6 @@ export interface ExtractDeps {
 
 export interface ExtractResponse {
   data: ExtractData;
-  tasks_total: number;
   quota: { used: number; limit: number };
 }
 
@@ -40,7 +60,7 @@ export async function handleExtract(input: Record<string, unknown>, deps: Extrac
 
   let data: ExtractData;
   try {
-    data = await deps.extract(text);
+    data = await deps.extract(text, dateContextOf(input, now));
   } catch (e) {
     if (e instanceof LlmUnavailable) throw new ApiError("unavailable", "llm");
     throw e;
@@ -54,5 +74,5 @@ export async function handleExtract(input: Record<string, unknown>, deps: Extrac
     db.prepare("UPDATE quota SET used = used + 1 WHERE device_key = ? AND changes() = 1").bind(key),
   ]);
   const after = normalize(await loadQuota(db, key), now);
-  return { ...trimForTier(data, premium), quota: { used: after.used, limit: limitOf(after, limits, now) } };
+  return { data, quota: { used: after.used, limit: limitOf(after, limits, now) } };
 }

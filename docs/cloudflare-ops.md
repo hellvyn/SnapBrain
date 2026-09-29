@@ -15,6 +15,7 @@ Semua langkah gratis dan tidak butuh kartu.
 7. **URL Worker:** tertulis di halaman Worker, bentuknya `https://snapbrain-api.<subdomain>.workers.dev`. Simpan di GitHub **Variables** sebagai `SNAPBRAIN_API_URL`. URL ini dibaca saat APK dibangun, jadi setelah variabel diisi, jalankan ulang workflow `android`: tab Actions → `android` → **Run workflow**, lalu unduh APK baru dari artifact `snapbrain-debug-apk`. APK yang dibangun sebelum variabel ini diisi menuju `snapbrain-api.invalid`, sehingga semua item gagal.
 8. **Firebase Console (plan Spark, gratis):** Authentication → Sign-in method → **Anonymous** → Enable. App Check → daftarkan app Android dengan Play Integrity. Untuk APK debug, pakai **Manage debug tokens**.
 9. **Opsional:**
+   - Selama fase uji `LIMIT_FREE` = `1000` (semua fitur gratis). Kembalikan ke `15` sebelum rilis (Rencana 3).
    - `LLM_MODEL` (default `auto`), limit kuota, dan `ADMOB_AD_UNIT_ID` adalah `vars` di `worker/wrangler.jsonc`. Setiap deploy CI menimpanya, jadi jangan diubah lewat dashboard. Ubah di `worker/wrangler.jsonc` lalu merge ke `main` (atau minta Claude yang mengubahnya).
    - Hanya secret yang diisi lewat dashboard: `LLM_API_KEY`, `DEVICE_SALT`, dan `PLAY_SERVICE_ACCOUNT_JSON` (baru dibutuhkan di Rencana 3).
 

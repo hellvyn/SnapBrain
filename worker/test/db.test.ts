@@ -9,7 +9,7 @@ it("has the migrated tables", async () => {
 });
 
 it("reads limits from vars", () => {
-  expect(limitsOf(env)).toEqual({ limitFree: 15, limitPremium: 300, rewardAmount: 3, rewardMaxPerDay: 3 });
+  expect(limitsOf(env)).toEqual({ limitFree: 1000, limitPremium: 300, rewardAmount: 3, rewardMaxPerDay: 3 });
 });
 
 it("maps error codes to Firebase-style wire names and HTTP status", () => {

@@ -9,7 +9,7 @@
     { "binding": "DB", "database_name": "snapbrain", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "migrations" }
   ],
   "vars": {
-    "LIMIT_FREE": "15",
+    "LIMIT_FREE": "1000",
     "LIMIT_PREMIUM": "300",
     "REWARD_AMOUNT": "3",
     "REWARD_MAX_PER_DAY": "3",
