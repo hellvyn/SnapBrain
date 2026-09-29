@@ -38,7 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -76,13 +76,14 @@ fun InboxScreen(
     category: String?,
     onCategoryChange: (String?) -> Unit,
     listState: LazyListState,
+    headerHeightState: MutableIntState,
     onOpen: (String) -> Unit,
 ) {
     val items: List<ItemEntity>? by remember(query, category) { repository.observe(query, category) }.collectAsState(initial = null)
     val progress by remember { repository.observeProgress().map { rows -> rows.associateBy { it.itemId } } }.collectAsState(initial = emptyMap())
     val quota by repository.quota.collectAsState()
     // Search and chips collapse as an overlay while scrolling down; the list viewport never resizes (spec S16).
-    var headerHeightPx by remember { mutableIntStateOf(0) }
+    var headerHeightPx by headerHeightState
     var headerOffsetPx by remember { mutableFloatStateOf(0f) }
     val connection = remember {
         object : NestedScrollConnection {

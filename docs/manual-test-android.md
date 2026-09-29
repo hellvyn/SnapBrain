@@ -12,14 +12,13 @@ Prasyarat: backend Cloudflare sudah di-deploy dan secret Worker diisi (docs/clou
 6. Share lalu tutup sheet. Ditutup saat "Mengekstrak teks..." maupun "AI sedang menganalisis", item tetap tersimpan dan diproses oleh worker (hasilnya muncul di Inbox tanpa perlu membuka ulang app).
 7. Share foto tanpa teks. Langsung tersimpan sebagai 📄 Lainnya, dan kuota tidak berkurang: cek di Cloudflare Dashboard → D1 → `snapbrain` → Console: `SELECT used FROM quota;`, nilainya tidak naik.
 8. Search nomor resi sebagian (misal 4 digit terakhir). Item yang cocok muncul. Chip "Belanja" memfilter kategori.
-9. Detail: pinch-zoom gambar, centang task, lalu buka ulang app. Centang task tersimpan.
-10. Tombol aksi: "Lacak Paket" membuka pencarian, "Tambah ke Kalender" membuka form kalender, "Buka Link" membuka browser.
+9. Detail: tekan "Lihat screenshot asli", lalu pinch-zoom gambar di dialog. Tutup dialog, centang item daftar, lalu buka ulang app. Centang tersimpan.
+10. Tombol aksi: "Lacak paket" membuka pencarian, "Kalender" membuka form kalender, "Buka link" membuka browser, "Salin" menyalin teks, "Buka Maps" membuka peta, "Chat WA" membuka WhatsApp, "Telepon" membuka dialer, "Cari di Shopee"/"Cari di Tokopedia" membuka pencarian produk.
 11. Item berstatus "Gagal, coba lagi": di Detail tekan "Coba lagi", item masuk antrean lagi.
 12. Di Detail tekan "Hapus": muncul dialog "Hapus screenshot ini?". "Batal" menutup dialog tanpa menghapus; "Hapus" menghapus item dan kembali ke Inbox.
-13. Item free-tier dengan banyak tugas: Detail menampilkan 1 tugas, lalu baris terkunci dengan teks "🔒 ... tugas lain".
-14. Putar layar (rotate) di Detail dan di Inbox. Teks pencarian, filter chip, dan posisi scroll tetap. Kembali dari Detail ke Inbox juga mempertahankan ketiganya.
-15. Detail: setelah zoom, gambar tetap tajam dan tidak bisa digeser keluar batas. Saat tidak zoom, menggeser di area gambar tetap men-scroll halaman.
-16. Mode gelap: aktifkan tema gelap di sistem, lalu cek Inbox, Detail, dialog "Hapus screenshot ini?" dan sheet Share. Teks terbaca dan tidak ada latar putih yang mencolok.
+13. Putar layar (rotate) di Detail dan di Inbox. Teks pencarian, filter chip, dan posisi scroll tetap. Kembali dari Detail ke Inbox juga mempertahankan ketiganya.
+14. Detail: setelah zoom di dialog, gambar tetap tajam dan tidak bisa digeser keluar batas. Saat tidak zoom, menggeser di area gambar tetap men-scroll halaman.
+15. Mode gelap: aktifkan tema gelap di sistem, lalu cek Inbox, Detail, dialog "Hapus screenshot ini?" dan sheet Share. Teks terbaca dan tidak ada latar putih yang mencolok.
 
 ## Fase A (daftar pintar, tampilan baru)
 

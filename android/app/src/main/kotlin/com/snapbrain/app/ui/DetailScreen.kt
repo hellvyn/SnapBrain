@@ -2,7 +2,8 @@ package com.snapbrain.app.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
@@ -58,10 +60,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
@@ -194,8 +198,12 @@ private fun HeroCard(item: ItemEntity, style: CategoryStyle, title: String, onRe
                 Text(style.name.uppercase(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.ExtraBold, color = style.tint)
             }
             Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
-            statusText(item)?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
-            if (item.status == ItemStatus.FAILED.name) Button(onClick = onRetry) { Text("Coba lagi") }
+            statusText(item)?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = statusColor(item)) }
+            if (item.status == ItemStatus.FAILED.name) {
+                // Dark primary is a light blue for text buttons; the filled button keeps the spec's dark blue.
+                val container = if (isSystemInDarkTheme()) Color(0xFF4262E8) else MaterialTheme.colorScheme.primary
+                Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = container, contentColor = Color.White)) { Text("Coba lagi") }
+            }
         }
     }
 }
@@ -208,7 +216,7 @@ private fun ActionTiles(actions: List<Action>, onClick: (Action) -> Unit) {
                 Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Icon(actionIcon(action), contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
                     Spacer(Modifier.height(6.dp))
-                    Text(action.label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(action.label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, maxLines = 2, textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -288,11 +296,14 @@ private fun ListCard(
 @Composable
 private fun ListRow(row: ListItemEntity, number: Int?, now: LocalDateTime, onToggle: () -> Unit) {
     val context = LocalContext.current
-    Row(Modifier.fillMaxWidth().clickable(onClick = onToggle), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier.fillMaxWidth().toggleable(value = row.checked, role = Role.Checkbox, onValueChange = { onToggle() }),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Checkbox(
             checked = row.checked,
-            onCheckedChange = { onToggle() },
-            colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.secondary),
+            onCheckedChange = null,
+            colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.secondary, checkmarkColor = MaterialTheme.colorScheme.onSecondary),
         )
         Text(
             (number?.let { "$it. " } ?: "") + row.text,
@@ -320,7 +331,7 @@ private fun Chip(text: String, color: Color, icon: ImageVector? = null, onClick:
         }
     }
     val shape = RoundedCornerShape(8.dp)
-    val background = color.copy(alpha = 0.12f)
+    val background = color.copy(alpha = 0.06f)
     if (onClick != null) {
         Surface(onClick = onClick, shape = shape, color = background, modifier = Modifier.padding(start = 6.dp).minimumInteractiveComponentSize(), content = content)
     } else {
@@ -335,8 +346,11 @@ private fun LegacyTasks(tasks: List<TaskItem>, onToggle: (Int) -> Unit) {
         Column(Modifier.padding(16.dp)) {
             Text("Tugas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
             tasks.forEach { task ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = task.isCompleted, onCheckedChange = { onToggle(task.id) })
+                Row(
+                    Modifier.toggleable(value = task.isCompleted, role = Role.Checkbox, onValueChange = { onToggle(task.id) }),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(checked = task.isCompleted, onCheckedChange = null)
                     Text(task.description)
                 }
             }

@@ -43,7 +43,7 @@ fun Context.shareText(text: String) {
 fun Context.startTimer(minutes: Int, label: String) {
     launch(
         Intent(AlarmClock.ACTION_SET_TIMER)
-            .putExtra(AlarmClock.EXTRA_LENGTH, minutes * 60)
+            .putExtra(AlarmClock.EXTRA_LENGTH, minutes.coerceIn(1, 1440) * 60)
             .putExtra(AlarmClock.EXTRA_MESSAGE, label.take(60))
             .putExtra(AlarmClock.EXTRA_SKIP_UI, false),
     )

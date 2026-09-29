@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,6 +40,11 @@ fun statusText(item: ItemEntity): String? = when (item.status) {
     ItemStatus.FAILED.name -> "Gagal, coba lagi"
     else -> null
 }
+
+/** Only real failures are red; waiting for internet is neutral. */
+@Composable
+fun statusColor(item: ItemEntity): Color =
+    if (item.status == ItemStatus.UNPROCESSED.name) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
 
 fun dateText(millis: Long): String =
     DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.forLanguageTag("id")).format(Date(millis))
@@ -64,7 +70,7 @@ fun SmartCard(item: ItemEntity, progress: ItemProgress?, now: LocalDateTime, onC
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(style.name, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = style.tint, modifier = Modifier.weight(1f))
                     when {
-                        status != null -> Text(status, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                        status != null -> Text(status, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = statusColor(item))
                         due != null -> Text(
                             due.text,
                             style = MaterialTheme.typography.labelMedium,
