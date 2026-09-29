@@ -1,6 +1,7 @@
 package com.snapbrain.app.ui
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -77,7 +78,10 @@ fun NotificationBanner(onDismiss: () -> Unit) {
                 TextButton(onClick = onDismiss) { Text("Nanti") }
                 Button(
                     onClick = {
-                        if (Build.VERSION.SDK_INT >= 33 && !asked) {
+                        // Permission already granted means the app or channel is switched off: only settings can help.
+                        if (Build.VERSION.SDK_INT >= 33 && !asked &&
+                            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                        ) {
                             asked = true
                             launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
                         } else {

@@ -124,8 +124,8 @@ fun DetailScreen(id: String, repository: ItemRepository, onBack: () -> Unit) {
     val legacyTasks = if (rows.isEmpty()) ExtractJson.decodeTasks(current.tasks) else emptyList()
     val actions = current.actionList()
     val now = LocalDateTime.now()
-    // Spec §6.3/S7: the button only shows when its rows have somewhere to land.
-    val hasBelanja = activatesBelanja(current.activation) && rows.any { it.role == "belanja" }
+    // Spec §6.3/S7: the button only shows when its rows have somewhere to land; bought rows already left Belanja.
+    val hasBelanja = activatesBelanja(current.activation) && rows.any { it.role == "belanja" && (it.inBelanja || !it.checked) }
     val toTodo = rows.any { todoEligible(it.role, it.kind) }
     // Active only while some row is still in Belanja or the item has To-do rows; after "Selesai belanja" it reads inactive.
     val shownActive = current.active && (rows.any { it.inBelanja } || toTodo)
