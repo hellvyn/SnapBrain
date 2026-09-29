@@ -38,6 +38,9 @@
 | S11 | Harga per satuan, total, dan budget dihitung app, bukan AI | Aritmetika AI ringan tidak bisa dipercaya |
 | S12 | Tidak menjumlahkan bahan yang sama lintas resep. Bahan bernama mirip ditampilkan berdampingan | Satuan (butir, siung, gram) sering tidak bisa dijumlahkan dengan pasti |
 | S13 | Tidak ada edit manual isi daftar | Tetap sesuai scope v1 |
+| S14 | Gaya terang (baris B mockup) sebagai utama; tema gelap mengikuti setelan sistem | Pilihan user. Dark mode sudah masuk scope v1 |
+| S15 | Inbox memakai ikon kategori, bukan thumbnail. Screenshot di Detail baru tampil setelah "Lihat screenshot asli" ditekan | Pilihan user. Tampilan seragam; hasil ekstraksi jadi fokus |
+| S16 | Chip kategori berikon di Inbox, menyembunyikan diri saat scroll ke bawah | Pilihan user, dibanding menu hamburger: filter tetap satu tap |
 
 ## 3. Kontrak `POST /extract` (baru)
 
@@ -153,26 +156,63 @@ checked INTEGER DEFAULT 0, checkedAt INTEGER?, remind INTEGER DEFAULT 1, inBelan
 
 ## 6. Fase A — tampilan
 
-**Detail, dari atas ke bawah:**
-1. Gambar (zoom, sudah ada).
-2. Kategori + judul.
-3. **Tombol aktivasi** sesuai `activation`:
-   - label: 🍳 Masak sekarang, 🛒 Mau beli, ✅ Kerjakan, 💳 Bayar, 📅 Ikut acara, ▶️ Coba sekarang;
-   - setelah ditekan menjadi "✓ Ada di To-do/Belanja", tap lagi untuk mengeluarkan;
-   - tidak tampil bila `none`.
-4. **Baris aksi** (≤ 3): aksi pertama tombol penuh, sisanya tombol garis. Ikon **Bagikan** selalu ada di app bar; isinya judul + info + daftar sebagai teks dengan ☐/☑.
-5. **Info:** tabel label | isi.
+Mockup yang disetujui: canvas "SnapBrain UI Directions", baris **B (terang)** — https://claude.ai/artifact/7pejisETrkRkbiRnndRq9c. Isi mockup adalah contoh, bukan data asli.
+
+### 6.1 Gaya visual
+
+| Token | Terang (utama) | Gelap (mengikuti setelan sistem) |
+|---|---|---|
+| Latar | `#F6F5FB` | `#12141A` |
+| Kartu | `#FFFFFF`, bayangan halus, radius 20 | `#1C1F28`, garis `#2E3342` |
+| Teks utama / sekunder | `#16151C` / `#6B6880` | `#F2F3F7` / `#A3A9BA` |
+| Aksen | `#6C4CF5` (progres, centang, tab aktif) | `#8FB0FF` |
+| Tombol utama | `#16151C`, teks putih | `#4262E8`, teks putih |
+| Bahaya / lewat | `#B3261E` | `#FF8A7A` |
+
+- **Font:** Plus Jakarta Sans (Google Fonts, dibundel di APK).
+- **Ikon kategori** (garis, 24 dp) di tile berwarna:
+
+  | Kategori | Ikon | Tile / warna ikon |
+  |---|---|---|
+  | Tugas | kotak centang | `#EDE8FF` / `#4128B8` |
+  | Keuangan | dompet | `#E4F6EE` / `#1F6B4A` |
+  | Belanja | troli | `#FFF0E0` / `#8A4B0F` |
+  | Event | kalender | `#E3ECFF` / `#1F4FC7` |
+  | Referensi | buku | `#DFF5F0` / `#1B6B5C` |
+  | Lainnya | dokumen | `#EFEEF3` / `#4A4858` |
+
+- Kontras teks ≥ 4,5:1 di kedua tema. Target sentuh ≥ 44 dp.
+
+### 6.2 Inbox
+- **Header:** tanggal hari ini, judul "Screenshot kamu", pill kuota, menu ⋮. Di bawahnya kotak cari dan **chip kategori berikon**.
+- **Kartu item:** tanpa gambar screenshot. Isinya:
+  - tile ikon kategori;
+  - nama kategori + tenggat terdekat yang belum dicentang (atau harga untuk Belanja, atau status "Menunggu internet");
+  - judul;
+  - progress bar + "1/3".
+- **Saat scroll ke bawah**, kotak cari dan chip menyembunyikan diri. Tersisa bar ringkas berisi judul + tombol cari. Scroll ke atas memunculkan lagi.
+- **Navigasi bawah:** Inbox · Belanja · To-do. Sampai Fase C, hanya Inbox.
+
+### 6.3 Detail, dari atas ke bawah
+1. App bar: Kembali, Bagikan, Hapus.
+2. **Kartu judul** berwarna tile kategori:
+   - ikon + nama kategori;
+   - judul;
+   - **tombol aktivasi** (tombol utama) sesuai `activation`: Masak sekarang, Mau beli, Kerjakan, Bayar, Ikut acara, Coba sekarang.
+     - Setelah ditekan menjadi "✓ Ada di To-do/Belanja"; tap lagi untuk mengeluarkan.
+     - Tidak tampil bila `none`.
+3. **"Lihat screenshot asli"**: gambar tidak tampil sampai tombol ini ditekan. Gambar lalu dibuka layar penuh dengan zoom (komponen zoom yang sudah ada).
+4. **Aksi** (≤ 3) sebagai tile berikon dalam satu baris. **Bagikan** di app bar menyusun judul + info + daftar sebagai teks dengan ☐/☑.
+5. **Info:** kartu berisi baris label | isi.
 6. **Satu kartu per daftar:**
-   - judul + progres ("Bumbu · 3/15 ✓");
+   - judul + progres ("Bumbu · 2/11") + progress bar;
    - checklist berupa kotak centang, langkah berupa nomor + kotak centang;
-   - chip "⏰ 3 Okt" (merah bila lewat) dan chip "⏱ 10 mnt" yang membuka timer di app Jam;
+   - chip tenggat ("Kam, 1 Okt", merah bila lewat) dan chip timer ("30 mnt") yang membuka timer di app Jam;
    - > 8 item dilipat dengan "Tampilkan semua (N)";
    - menu kartu: Salin daftar, Bagikan daftar.
 7. Teaser "🔒 N tugas lain — Pro" dihapus.
 
-**Inbox:** kartu menampilkan progres "✓ 3/12" dan tenggat terdekat yang belum dicentang ("⏰ Besok").
-
-**Aksi di app (dibangun app, bukan AI):**
+### 6.4 Aksi di app (dibangun app, bukan AI)
 
 | Aksi | Implementasi |
 |---|---|
@@ -184,11 +224,11 @@ checked INTEGER DEFAULT 0, checkedAt INTEGER?, remind INTEGER DEFAULT 1, inBelan
 
 App tetap memvalidasi ulang semua aksi (defense in depth, seperti `normalized()` sekarang).
 
-**Splash screen + ikon:**
+### 6.5 Splash screen + ikon
 - **Ikon:** adaptive icon; latar `#1A1D25` (warna kotak logo) + foreground dari `design/logo-source.png`. Glyph ada di zona aman 66 dp. Ikon sementara `ic_launcher.xml` dibuang.
   - [FACT] Sumber hanya 435×420 px: cukup untuk launcher dan splash, tidak cukup untuk ikon Play Store 512 px. File ≥ 1024 px dibutuhkan sebelum rilis (Rencana 3).
-- **Splash sistem (Android 12+):** atribut `windowSplashScreen*` di `values-v31` dengan latar `#1A1D25` dan ikon yang sama. Tanpa library baru.
-- **Splash app:** layar Compose di `MainActivity`:
+- **Splash sistem (Android 12+):** atribut `windowSplashScreen*` di `values-v31` dengan latar tema (`#F6F5FB` terang, `#12141A` gelap) dan ikon yang sama. Tanpa library baru.
+- **Splash app:** layar Compose di `MainActivity`, latar tema:
   - logo di tengah, "SnapBrain" di bawahnya, "made with ❤️ by **hellvyn**" di bagian bawah;
   - "hellvyn" dapat di-tap dan membuka `https://hellvyn.id` di browser; kembali ke app langsung ke Inbox;
   - 3 detik, tap di mana saja untuk melewati;
