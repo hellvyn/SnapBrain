@@ -11,7 +11,7 @@ interface ItemDao {
     // ponytail: LIKE scan over every row; move to FTS4 if inboxes reach tens of thousands of items.
     @Query(
         """SELECT * FROM item
-           WHERE (:category IS NULL OR category = :category)
+           WHERE (:category IS NULL OR category = :category OR (:category = 'unclassified' AND category IS NULL))
              AND (:query = '' OR ocrText LIKE '%' || :query || '%' OR title LIKE '%' || :query || '%')
            ORDER BY createdAt DESC""",
     )

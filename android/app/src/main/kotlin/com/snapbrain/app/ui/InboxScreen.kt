@@ -1,6 +1,5 @@
 package com.snapbrain.app.ui
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,6 +8,16 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,11 +36,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,7 +49,6 @@ import androidx.compose.ui.unit.dp
 import com.snapbrain.app.data.ItemEntity
 import com.snapbrain.app.data.ItemRepository
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -74,10 +81,19 @@ fun InboxScreen(
     val items: List<ItemEntity>? by remember(query, category) { repository.observe(query, category) }.collectAsState(initial = null)
     val progress by remember { repository.observeProgress().map { rows -> rows.associateBy { it.itemId } } }.collectAsState(initial = emptyMap())
     val quota by repository.quota.collectAsState()
-    val scope = rememberCoroutineScope()
-    // Search and chips hide while scrolling down and come back on the way up (spec S16).
-    val showFilters = listState.isScrollingUp()
-    val now = LocalDateTime.now()
+    // Search and chips collapse as an overlay while scrolling down; the list viewport never resizes (spec S16).
+    var headerHeightPx by remember { mutableIntStateOf(0) }
+    var headerOffsetPx by remember { mutableFloatStateOf(0f) }
+    val connection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                headerOffsetPx = (headerOffsetPx + available.y).coerceIn(-headerHeightPx.toFloat(), 0f)
+                return Offset.Zero
+            }
+        }
+    }
+    val headerHeight = with(LocalDensity.current) { headerHeightPx.toDp() }
+    val now = remember(items, progress) { LocalDateTime.now() }
 
     Scaffold { padding ->
         Column(Modifier.padding(padding)) {
@@ -95,20 +111,39 @@ fun InboxScreen(
                         "Kuota ${q.used}/${q.limit}",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.secondary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier
                             .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f), RoundedCornerShape(50))
                             .padding(horizontal = 10.dp, vertical = 6.dp),
                     )
                 }
-                AnimatedVisibility(visible = !showFilters) {
-                    IconButton(onClick = { scope.launch { listState.animateScrollToItem(0) } }) {
+                if (headerOffsetPx < -headerHeightPx / 2f) {
+                    IconButton(onClick = { headerOffsetPx = 0f }) {
                         Icon(SnapIcons.Search, contentDescription = "Cari")
                     }
                 }
             }
-            AnimatedVisibility(visible = showFilters) {
-                Column {
+            Box(Modifier.fillMaxSize().clipToBounds().nestedScroll(connection)) {
+                val list = items
+                if (list != null && list.isEmpty()) {
+                    Box(Modifier.fillMaxSize().padding(top = headerHeight).padding(32.dp), contentAlignment = Alignment.Center) {
+                        Text(
+                            if (query.isBlank() && category == null) "Belum ada screenshot. Coba share screenshot ke aplikasi ini!" else "Tidak ada hasil.",
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                } else if (list != null) {
+                    LazyColumn(state = listState, contentPadding = PaddingValues(top = headerHeight, bottom = 16.dp)) {
+                        items(list, key = { it.id }) { item -> SmartCard(item, progress[item.id], now, onClick = { onOpen(item.id) }) }
+                    }
+                }
+                Column(
+                    Modifier
+                        .onSizeChanged { headerHeightPx = it.height }
+                        .offset { IntOffset(0, headerOffsetPx.roundToInt()) }
+                        .background(MaterialTheme.colorScheme.background),
+                ) {
                     OutlinedTextField(
                         value = query,
                         onValueChange = onQueryChange,
@@ -145,39 +180,6 @@ fun InboxScreen(
                     }
                 }
             }
-            val list = items ?: return@Column
-            if (list.isEmpty()) {
-                Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-                    Text(
-                        if (query.isBlank() && category == null) "Belum ada screenshot. Coba share screenshot ke aplikasi ini!" else "Tidak ada hasil.",
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            } else {
-                LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 16.dp)) {
-                    items(list, key = { it.id }) { item -> SmartCard(item, progress[item.id], now, onClick = { onOpen(item.id) }) }
-                }
-            }
         }
     }
-}
-
-/** True at the top of the list and while the user scrolls up. */
-@Composable
-private fun LazyListState.isScrollingUp(): Boolean {
-    var previousIndex by remember(this) { mutableIntStateOf(firstVisibleItemIndex) }
-    var previousOffset by remember(this) { mutableIntStateOf(firstVisibleItemScrollOffset) }
-    return remember(this) {
-        derivedStateOf {
-            val up = if (previousIndex != firstVisibleItemIndex) {
-                previousIndex > firstVisibleItemIndex
-            } else {
-                previousOffset >= firstVisibleItemScrollOffset
-            }
-            previousIndex = firstVisibleItemIndex
-            previousOffset = firstVisibleItemScrollOffset
-            up
-        }
-    }.value
 }
