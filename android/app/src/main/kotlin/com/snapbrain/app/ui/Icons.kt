@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 /** 24dp stroke icons drawn from the mockup's SVG paths, so the app needs no icon library. */
 object SnapIcons {
     val All = icon("all", "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z")
+    val Inbox = icon("inbox", "M4 13h4l2 3h4l2 -3h4M5 5h14l1 8v6H4v-6z")
     val Task = icon("task", "M9 11l3 3 8 -8M20 12v7H4V5h11")
     val Finance = icon("finance", "M3 7h18v12H3zM16 13h2M3 7l3 -3h12")
     val Shopping = icon("shopping", "M6 6h15l-2 9H8L6 3H3M9 20h0.01M18 20h0.01")

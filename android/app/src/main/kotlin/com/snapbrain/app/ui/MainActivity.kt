@@ -2,9 +2,21 @@ package com.snapbrain.app.ui
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -12,8 +24,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import com.snapbrain.app.SnapBrainApp
 import com.snapbrain.app.process.ProcessWorker
+import com.snapbrain.core.IS_PRO
+
+/** Spec §8 bottom navigation; Belanja joins in Task 5. */
+private enum class Tab(val label: String, val icon: ImageVector) {
+    INBOX("Inbox", SnapIcons.Inbox),
+    TODO("To-do", SnapIcons.Task),
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,6 +54,7 @@ class MainActivity : ComponentActivity() {
                 }
                 var showSplash by rememberSaveable { mutableStateOf(freshStart) }
                 var openId by rememberSaveable { mutableStateOf<String?>(null) }
+                var tab by rememberSaveable { mutableStateOf(Tab.INBOX) }
                 var query by rememberSaveable { mutableStateOf("") }
                 var category by rememberSaveable { mutableStateOf<String?>(null) }
                 val listState = rememberLazyListState()
@@ -40,17 +63,49 @@ class MainActivity : ComponentActivity() {
                 val id = openId
                 when {
                     showSplash -> SplashScreen(onDone = { showSplash = false })
-                    id == null -> InboxScreen(
-                        repository,
-                        query, { query = it },
-                        category, { category = it },
-                        listState,
-                        headerHeightPx,
-                        onOpen = { openId = it },
-                    )
-                    else -> DetailScreen(id, repository, onBack = { openId = null })
+                    id != null -> DetailScreen(id, repository, onBack = { openId = null })
+                    else -> {
+                        BackHandler(enabled = tab != Tab.INBOX) { tab = Tab.INBOX }
+                        Scaffold(bottomBar = { if (IS_PRO) NavBar(tab, onSelect = { tab = it }) }) { padding ->
+                            // Each tab has its own Scaffold; consuming the insets here keeps them from padding twice.
+                            Box(Modifier.padding(padding).consumeWindowInsets(padding)) {
+                                when (tab) {
+                                    Tab.INBOX -> InboxScreen(
+                                        repository,
+                                        query, { query = it },
+                                        category, { category = it },
+                                        listState,
+                                        headerHeightPx,
+                                        onOpen = { openId = it },
+                                    )
+                                    Tab.TODO -> TodoScreen(repository, onOpen = { openId = it })
+                                }
+                            }
+                        }
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun NavBar(selected: Tab, onSelect: (Tab) -> Unit) {
+    NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+        Tab.entries.forEach { tab ->
+            NavigationBarItem(
+                selected = tab == selected,
+                onClick = { onSelect(tab) },
+                icon = { Icon(tab.icon, contentDescription = null) },
+                label = { Text(tab.label, fontWeight = FontWeight.Bold) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.onSurface,
+                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                    indicatorColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f),
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            )
         }
     }
 }
