@@ -84,7 +84,7 @@ fun ExtractData.normalized(): ExtractData = copy(
         l.copy(
             kind = if (l.kind in KINDS) l.kind else "checklist",
             role = if (l.role in ROLES) l.role else "lainnya",
-            items = l.items.filter { it.text.isNotBlank() },
+            items = l.items.filter { it.text.isNotBlank() }.map { if (parseDue(it.due) == null) it.copy(due = "") else it },
         )
     }.filter { it.items.isNotEmpty() },
     actions = actions.filter { actionOf(it.type, it.payload) != null }.take(3),

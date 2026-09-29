@@ -62,6 +62,20 @@ class ExtractTest {
     }
 
     @Test
+    fun clearsDueThatDoesNotParse() {
+        val d = ExtractData(
+            category = "task",
+            title = "x",
+            lists = listOf(ItemList("A", items = listOf(
+                ListItemData("a", due = "besok"),
+                ListItemData("b", due = "+999999999-01-01"),
+                ListItemData("c", due = "2026-10-02T09:00"),
+            ))),
+        ).normalized()
+        assertEquals(listOf("", "", "2026-10-02T09:00"), d.lists.single().items.map { it.due })
+    }
+
+    @Test
     fun roundTripsStoredJson() {
         val info = mapOf("Total" to "Rp 50.000")
         assertEquals(info, ExtractJson.decodeInfo(ExtractJson.encodeInfo(info)))

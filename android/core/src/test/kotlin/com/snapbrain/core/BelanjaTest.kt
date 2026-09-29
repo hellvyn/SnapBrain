@@ -21,6 +21,8 @@ class BelanjaTest {
         assertEquals("tomat", ingredientKey("2 buah tomat, potong dadu"))
         assertEquals("santan", ingredientKey("santan (dari 1 butir kelapa)"))
         assertEquals("garam", ingredientKey("setengah sdt garam."))
+        assertEquals("gula", ingredientKey("1 sdm. gula"))
+        assertEquals("garam", ingredientKey("(opsional) garam"))
     }
 
     @Test

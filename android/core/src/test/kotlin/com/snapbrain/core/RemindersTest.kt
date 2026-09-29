@@ -39,6 +39,13 @@ class RemindersTest {
     }
 
     @Test
+    fun extremeDatesNeverThrow() {
+        assertEquals(emptyList(), reminderTimes("+999999999-12-31T09:00", now)) // epoch millis overflow
+        assertEquals(emptyList(), reminderTimes("-999999999-01-01T00:30", now)) // minusHours below LocalDateTime.MIN
+        assertEquals(emptyList(), reminderTimes("+999999999-12-31", now))
+    }
+
+    @Test
     fun usesTheDeviceZone() {
         val papua = ZoneId.of("Asia/Jayapura") // UTC+9, two hours ahead of Jakarta
         val times = reminderTimes("2026-10-02", at(9, 29, 12, 0, papua))

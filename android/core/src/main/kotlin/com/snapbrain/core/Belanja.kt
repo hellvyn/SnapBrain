@@ -13,16 +13,19 @@ private val UNITS = setOf(
 private val AMOUNT_WORDS = setOf("secukupnya", "sedikit", "sejumput", "segenggam", "setengah", "seperempat")
 private val NUMBER = Regex("""^[\d½¼¾⅓⅔]+([.,/\-][\d½¼¾⅓⅔]+)*(kg|g|gr|ml|l|cc)?$""")
 private val SPACES = Regex("""\s+""")
+private val PARENS = Regex("""\(.*?\)""")
 
 /**
  * Spec §8: "9 butir bawang merah" and "Bawang merah 5 siung" both become "bawang merah". A unit word is
  * dropped only right after a number or amount word, so "buah naga" stays whole.
  */
 fun ingredientKey(text: String): String {
-    val head = text.lowercase(Locale.ROOT).split(',', '(').first().trim().trimEnd('.', ':', ';')
+    val lower = text.lowercase(Locale.ROOT)
+    // "(opsional) garam": nothing before the bracket, so drop the bracketed part instead.
+    val head = lower.split(',', '(').first().ifBlank { lower.replace(PARENS, " ").split(',').first() }
     val kept = mutableListOf<String>()
     var afterAmount = false
-    for (word in head.split(SPACES).filter { it.isNotEmpty() }) {
+    for (word in head.split(SPACES).map { it.trimEnd('.', ',', ':', ';') }.filter { it.isNotEmpty() }) {
         val amount = NUMBER.matches(word) || word in AMOUNT_WORDS
         if (!amount && !(afterAmount && word in UNITS)) kept += word
         afterAmount = amount
@@ -60,14 +63,14 @@ fun parseSize(size: String?): PackSize? {
     val m = SIZE.find(s) ?: return null
     val raw = m.groupValues[1]
     val n = if (THOUSANDS.matches(raw)) raw.replace(".", "").toDouble() else raw.replace(',', '.').toDouble()
-    val size = when (m.groupValues[2]) {
+    val pack = when (m.groupValues[2]) {
         "ml" -> PackSize(n, SizeUnit.ML)
         "l", "ltr", "liter" -> PackSize(n * 1000, SizeUnit.ML)
         "g", "gr", "gram" -> PackSize(n, SizeUnit.G)
         "kg" -> PackSize(n * 1000, SizeUnit.G)
         else -> PackSize(n, SizeUnit.PCS)
     }
-    return size.takeIf { it.amount > 0 }
+    return pack.takeIf { it.amount > 0 }
 }
 
 /** Spec §8 Bandingkan: per 100 ml, per 100 g, or per item; "–" without a price or a readable size. */

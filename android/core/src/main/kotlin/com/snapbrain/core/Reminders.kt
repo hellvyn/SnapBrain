@@ -1,5 +1,6 @@
 package com.snapbrain.core
 
+import java.time.DateTimeException
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZonedDateTime
@@ -16,14 +17,21 @@ private val MORNING = LocalTime.of(8, 0)
  */
 fun reminderTimes(due: String?, now: ZonedDateTime): List<ReminderTime> {
     val (date, time) = parseDue(due) ?: return emptyList()
-    val local = if (time == null) {
-        listOf(ReminderSlot.DAY_BEFORE to date.minusDays(1).atTime(MORNING), ReminderSlot.SAME_DAY to date.atTime(MORNING))
-    } else {
-        listOf(ReminderSlot.HOUR_BEFORE to LocalDateTime.of(date, time).minusHours(1))
-    }
     val nowMillis = now.toInstant().toEpochMilli()
-    return local.map { (slot, at) -> ReminderTime(slot, at.atZone(now.zone).toInstant().toEpochMilli()) }
-        .filter { it.atMillis > nowMillis }
+    // A stored due like "+999999999-12-31T09:00" overflows the date math; such a row simply never reminds.
+    val times = try {
+        val local = if (time == null) {
+            listOf(ReminderSlot.DAY_BEFORE to date.minusDays(1).atTime(MORNING), ReminderSlot.SAME_DAY to date.atTime(MORNING))
+        } else {
+            listOf(ReminderSlot.HOUR_BEFORE to LocalDateTime.of(date, time).minusHours(1))
+        }
+        local.map { (slot, at) -> ReminderTime(slot, at.atZone(now.zone).toInstant().toEpochMilli()) }
+    } catch (e: DateTimeException) {
+        emptyList()
+    } catch (e: ArithmeticException) {
+        emptyList()
+    }
+    return times.filter { it.atMillis > nowMillis }
 }
 
 /** Notification title: "⏰ Bayar listrik — besok", "⏰ Kumpul laporan — jam 23:59". */
