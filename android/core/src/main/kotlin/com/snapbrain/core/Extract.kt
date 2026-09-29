@@ -7,6 +7,7 @@ import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 
+/** v1 task, still read from items stored before the v2 contract. */
 @Serializable
 data class TaskItem(
     val id: Int,
@@ -15,33 +16,51 @@ data class TaskItem(
 )
 
 @Serializable
+data class ListItemData(
+    val text: String,
+    val due: String = "",
+    val minutes: Int = 0,
+    val price: Long = 0,
+    val size: String = "",
+)
+
+@Serializable
+data class ItemList(
+    val title: String = "",
+    val kind: String = "checklist",
+    val role: String = "lainnya",
+    val items: List<ListItemData> = emptyList(),
+)
+
+@Serializable
+data class ActionData(val type: String, val payload: String)
+
+@Serializable
 data class ExtractData(
     val category: String,
     val title: String,
-    @SerialName("extracted_info") val extractedInfo: Map<String, String> = emptyMap(),
-    @SerialName("action_type") val actionType: String = "none",
-    @SerialName("action_payload") val actionPayload: String = "",
-    val tasks: List<TaskItem> = emptyList(),
+    val info: Map<String, String> = emptyMap(),
+    val lists: List<ItemList> = emptyList(),
+    val actions: List<ActionData> = emptyList(),
+    val activation: String = "none",
 )
 
 @Serializable
 data class Quota(val used: Int, val limit: Int)
 
 @Serializable
-data class ExtractResponse(
-    val data: ExtractData,
-    @SerialName("tasks_total") val tasksTotal: Int = 0,
-    val quota: Quota,
-)
+data class ExtractResponse(val data: ExtractData, val quota: Quota)
 
 val CATEGORIES = listOf("task", "finance", "shopping", "event", "reference", "unclassified")
-private val ACTIONS = setOf("track_parcel", "add_calendar", "copy_text", "open_url", "none")
-private val HTTP_URL = Regex("^https?://\\S+$", RegexOption.IGNORE_CASE)
+private val KINDS = setOf("checklist", "steps")
+private val ROLES = setOf("belanja", "todo", "bawa", "lainnya")
+private val ACTIVATIONS = setOf("masak", "beli", "kerjakan", "bayar", "ikut", "coba", "none")
 
 object ExtractJson {
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
     private val infoSerializer = MapSerializer(String.serializer(), String.serializer())
     private val tasksSerializer = ListSerializer(TaskItem.serializer())
+    private val actionsSerializer = ListSerializer(ActionData.serializer())
 
     fun parse(text: String): ExtractResponse = json.decodeFromString(ExtractResponse.serializer(), text)
 
@@ -52,21 +71,25 @@ object ExtractJson {
     fun encodeTasks(tasks: List<TaskItem>): String = json.encodeToString(tasksSerializer, tasks)
     fun decodeTasks(text: String?): List<TaskItem> =
         text?.let { runCatching { json.decodeFromString(tasksSerializer, it) }.getOrNull() } ?: emptyList()
+
+    fun encodeActions(actions: List<ActionData>): String = json.encodeToString(actionsSerializer, actions)
+    fun decodeActions(text: String?): List<ActionData> =
+        text?.let { runCatching { json.decodeFromString(actionsSerializer, it) }.getOrNull() } ?: emptyList()
 }
 
-/** Defense in depth: the server already validates, but the app must never render a broken action. */
-fun ExtractData.normalized(): ExtractData {
-    var action = if (actionType in ACTIONS) actionType else "none"
-    var payload = actionPayload.trim()
-    if (action == "open_url" && !HTTP_URL.matches(payload)) action = "none"
-    if (action == "none") payload = ""
-    return copy(
-        category = if (category in CATEGORIES) category else "unclassified",
-        actionType = action,
-        actionPayload = payload,
-        tasks = tasks.filter { it.description.isNotBlank() },
-    )
-}
+/** Defense in depth: the server already validates, but the app must never store a list or action it cannot show. */
+fun ExtractData.normalized(): ExtractData = copy(
+    category = if (category in CATEGORIES) category else "unclassified",
+    lists = lists.map { l ->
+        l.copy(
+            kind = if (l.kind in KINDS) l.kind else "checklist",
+            role = if (l.role in ROLES) l.role else "lainnya",
+            items = l.items.filter { it.text.isNotBlank() },
+        )
+    }.filter { it.items.isNotEmpty() },
+    actions = actions.filter { actionOf(it.type, it.payload) != null }.take(3),
+    activation = if (activation in ACTIVATIONS) activation else "none",
+)
 
 fun categoryLabel(category: String?): String = when (category) {
     "task" -> "✅ Tugas"

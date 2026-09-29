@@ -6,52 +6,77 @@ import kotlin.test.assertTrue
 
 class ExtractTest {
     private val sample = """
-        {"data":{"category":"shopping","title":"Paket Shopee dikirim",
-         "extracted_info":{"No. Resi":"JP123"},"action_type":"track_parcel",
-         "action_payload":"JP123","tasks":[{"id":1,"description":"Cek paket","is_completed":false}]},
-         "tasks_total":3,"quota":{"used":2,"limit":15},"extra_field":true}
+        {"data":{"category":"reference","title":"Resep Pepes Ayam",
+         "info":{"Porsi":"20 orang"},
+         "lists":[{"title":"Bumbu","kind":"checklist","role":"belanja",
+           "items":[{"text":"9 butir bawang merah","due":"","minutes":0,"price":0,"size":""}]}],
+         "actions":[{"type":"open_url","payload":"https://cookpad.com/id/resep/1"}],
+         "activation":"masak","extra_field":true},
+         "quota":{"used":2,"limit":1000}}
     """.trimIndent()
 
     @Test
     fun parsesServerResponseAndIgnoresUnknownFields() {
         val r = ExtractJson.parse(sample)
-        assertEquals("shopping", r.data.category)
-        assertEquals(mapOf("No. Resi" to "JP123"), r.data.extractedInfo)
-        assertEquals(TaskItem(1, "Cek paket", false), r.data.tasks.single())
-        assertEquals(3, r.tasksTotal)
-        assertEquals(Quota(2, 15), r.quota)
+        assertEquals("reference", r.data.category)
+        assertEquals(mapOf("Porsi" to "20 orang"), r.data.info)
+        assertEquals(ItemList("Bumbu", "checklist", "belanja", listOf(ListItemData("9 butir bawang merah"))), r.data.lists.single())
+        assertEquals(ActionData("open_url", "https://cookpad.com/id/resep/1"), r.data.actions.single())
+        assertEquals("masak", r.data.activation)
+        assertEquals(Quota(2, 1000), r.quota)
     }
 
     @Test
-    fun normalizesUnknownCategoryAndAction() {
-        val d = ExtractData(category = "gossip", title = "x", actionType = "teleport", actionPayload = "p").normalized()
+    fun normalizesUnknownEnums() {
+        val d = ExtractData(
+            category = "gossip",
+            title = "x",
+            lists = listOf(ItemList("A", kind = "table", role = "hobi", items = listOf(ListItemData("a")))),
+            activation = "dance",
+        ).normalized()
         assertEquals("unclassified", d.category)
-        assertEquals("none", d.actionType)
-        assertEquals("", d.actionPayload)
+        assertEquals("checklist", d.lists.single().kind)
+        assertEquals("lainnya", d.lists.single().role)
+        assertEquals("none", d.activation)
     }
 
     @Test
-    fun downgradesNonHttpOpenUrl() {
-        val bad = ExtractData(category = "reference", title = "x", actionType = "open_url", actionPayload = "javascript:alert(1)").normalized()
-        assertEquals("none", bad.actionType)
-        val ok = ExtractData(category = "reference", title = "x", actionType = "open_url", actionPayload = "https://a.id").normalized()
-        assertEquals("open_url", ok.actionType)
+    fun dropsBlankItemsEmptyListsAndBadActions() {
+        val d = ExtractData(
+            category = "task",
+            title = "x",
+            lists = listOf(
+                ItemList("A", items = listOf(ListItemData(" "), ListItemData("Kerjakan"))),
+                ItemList("B", items = listOf(ListItemData(""))),
+            ),
+            actions = listOf(
+                ActionData("open_url", "javascript:alert(1)"),
+                ActionData("copy_text", "1"),
+                ActionData("copy_text", "2"),
+                ActionData("copy_text", "3"),
+                ActionData("copy_text", "4"),
+            ),
+        ).normalized()
+        assertEquals(listOf("Kerjakan"), d.lists.single().items.map { it.text })
+        assertEquals(listOf("1", "2", "3"), d.actions.map { it.payload })
     }
 
     @Test
-    fun dropsBlankTasks() {
-        val d = ExtractData(category = "task", title = "x", tasks = listOf(TaskItem(1, " "), TaskItem(2, "Kerjakan"))).normalized()
-        assertEquals(listOf("Kerjakan"), d.tasks.map { it.description })
-    }
-
-    @Test
-    fun roundTripsInfoAndTasksForStorage() {
+    fun roundTripsStoredJson() {
         val info = mapOf("Total" to "Rp 50.000")
         assertEquals(info, ExtractJson.decodeInfo(ExtractJson.encodeInfo(info)))
+        val actions = listOf(ActionData("whatsapp", "6281519201166"))
+        assertEquals(actions, ExtractJson.decodeActions(ExtractJson.encodeActions(actions)))
+        assertTrue(ExtractJson.decodeActions(null).isEmpty())
+        assertTrue(ExtractJson.decodeActions("not json").isEmpty())
+    }
+
+    @Test
+    fun decodesLegacyTasks() {
         val tasks = listOf(TaskItem(1, "a", true))
         assertEquals(tasks, ExtractJson.decodeTasks(ExtractJson.encodeTasks(tasks)))
-        assertTrue(ExtractJson.decodeInfo(null).isEmpty())
-        assertTrue(ExtractJson.decodeTasks("not json").isEmpty())
+        assertEquals(TaskItem(2, "b"), ExtractJson.decodeTasks("""[{"id":2,"description":"b","is_completed":false}]""").single())
+        assertTrue(ExtractJson.decodeTasks(null).isEmpty())
     }
 
     @Test

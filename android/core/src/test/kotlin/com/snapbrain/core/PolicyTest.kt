@@ -6,7 +6,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class PolicyTest {
-    private val ok = ExtractOutcome.Success(ExtractResponse(ExtractData("task", "x"), 0, Quota(1, 15)))
+    private val ok = ExtractOutcome.Success(ExtractResponse(ExtractData("task", "x"), Quota(1, 15)))
 
     @Test
     fun mapsFunctionsErrorCodes() {
