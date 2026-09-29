@@ -9,7 +9,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -49,7 +51,11 @@ private val DarkColors = darkColorScheme(
 
 @Composable
 fun SnapBrainTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = if (isSystemInDarkTheme()) DarkColors else LightColors, typography = SnapTypography, content = content)
+    val scheme = if (isSystemInDarkTheme()) DarkColors else LightColors
+    MaterialTheme(colorScheme = scheme, typography = SnapTypography) {
+        // Outside a Scaffold nothing provides a content color, so default text/icons would render black in dark mode.
+        CompositionLocalProvider(LocalContentColor provides scheme.onBackground, content = content)
+    }
 }
 
 /** Upcoming (not yet overdue) due dates. */

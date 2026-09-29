@@ -46,7 +46,7 @@ fun SplashScreen(onDone: () -> Unit) {
             tag = "hellvyn",
             styles = TextLinkStyles(SpanStyle(fontWeight = FontWeight.ExtraBold, textDecoration = TextDecoration.Underline)),
             linkInteractionListener = LinkInteractionListener {
-                uriHandler.openUri("https://hellvyn.id")
+                runCatching { uriHandler.openUri("https://hellvyn.id") } // throws when no browser is installed
                 onDone()
             },
         )
@@ -74,7 +74,7 @@ fun SplashScreen(onDone: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text("Ketuk di mana saja untuk lanjut", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(credit, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground)
+            Text(credit, modifier = Modifier.padding(vertical = 12.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground)
         }
     }
 }
