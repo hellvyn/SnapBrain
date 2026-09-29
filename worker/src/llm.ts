@@ -29,7 +29,7 @@ Semua field wajib ada. Pakai "" atau 0 bila kosong.
 Aturan umum:
 - Hanya isi yang benar-benar ada di teks. Bagian yang terpotong dibiarkan kosong, jangan ditebak.
 - Tidak boleh ada item dobel. Tulis takaran dan jumlah utuh ("15 buah cabai merah keriting").
-- Tanggal relatif ("besok", "Jumat depan", "jam 3 sore") dihitung dari tanggal hari ini yang diberikan.
+- Tanggal relatif ("besok", "Jumat depan", "jam 3 sore") dihitung dari tanggal hari ini yang diberikan. "besok" = hari ini + 1 hari. Jam 12 jam ("jam 3 sore") ditulis 24 jam ("15:00"), titik pada jam ("23.59") menjadi titik dua ("23:59"). Tanggal tertulis ("Senin 12 Okt 2026 08.00") ditulis lengkap sebagai due "2026-10-12T08:00".
 - category: task (tugas/instruksi), finance (transfer, tagihan, struk, rekening), shopping (produk, keranjang, pesanan, resi, voucher), event (acara, jadwal, undangan, tiket), reference (resep, artikel, tutorial, info untuk disimpan), unclassified (selain itu).
 - title: maksimal 5 kata, Bahasa Indonesia. Nama merek, orang, dan tempat tidak diterjemahkan.
 - info: maksimal 8 pasangan label dan isi terpenting. Label dalam Bahasa Indonesia.
@@ -47,10 +47,10 @@ Aturan umum:
   - whatsapp: nomor WhatsApp
   - call: nomor telepon
   - search_product: "shopee|nama barang", "tokopedia|nama barang", atau "other|nama barang"
-- activation: masak (resep), beli (produk atau keranjang), kerjakan (chat berisi tugas), bayar (tagihan), ikut (acara), coba (tutorial), none (selain itu).
+- activation: masak (resep), beli (produk atau keranjang), kerjakan (chat berisi tugas), bayar (tagihan), ikut (undangan, acara, jadwal, tiket), coba (tutorial atau langkah-langkah cara melakukan sesuatu), none (selain itu). Selalu pilih salah satu nilai ini bila cocok, jangan none untuk undangan, acara, atau tutorial.
 
 Panduan per jenis screenshot:
-- Chat berisi tugas atau janjian (grup kelas, kantor, keluarga): list "To-do" (todo), satu item per tugas, awali dengan nama penanggung jawab bila disebut ("Budi — siapkan slide"), due per item. info: Dari, Tenggat.
+- Chat berisi tugas atau janjian (grup kelas, kantor, keluarga): list "To-do" (todo), satu item per tugas, selalu awali dengan nama penanggung jawab bila disebut ("Budi — siapkan slide", "Dewi — kirim laporan budget"), due per item. info: Dari, Tenggat.
 - Struk dan bukti transfer: info Total, Tanggal, Penerima atau Merchant, Metode, Status. Struk: list "Rincian" (lainnya) dengan price per baris. Bukti transfer: copy_text berisi ringkasan ("Transfer Rp 500.000 ke Budi berhasil, 29 Sep").
 - Tagihan dan invoice: info Total, Jatuh tempo, No. Rekening atau VA. list "To-do" berisi "Bayar … sebelum …" dengan due. copy_text nomor rekening atau VA.
 - Resep: info Porsi, Waktu, Sumber. list "Bahan Utama", "Bumbu", "Pelengkap" (belanja) dan "Langkah" (steps, minutes bila ada durasi). open_url sumber bila tertulis.
@@ -58,6 +58,7 @@ Panduan per jenis screenshot:
 - Keranjang: info Toko, Total. list "Mau dibeli" (belanja) dengan price dan size. search_product.
 - Pesanan dan resi: info Toko, Total, No. Pesanan, Kurir, Estimasi tiba. list "Barang dipesan" (lainnya). list "To-do" untuk batas komplain atau retur dengan due. track_parcel.
 - Voucher, promo, flash sale, kode redeem game: info Syarat, Minimal belanja. list "To-do" ("Pakai voucher … sebelum …", "Flash sale mulai …", "Klaim kode sebelum …") dengan due. copy_text kode.
+- Jadwal berisi beberapa baris (jadwal ujian, kuliah, turnamen): list "Jadwal" (todo), satu item per baris ("Ujian Statistika R.301") dengan due lengkap tanggal dan jam untuk setiap item. Semua baris harus masuk, jangan ada yang dilewat.
 - Undangan, acara, jadwal (meeting, kuliah, ujian, turnamen, tiket): info Tanggal dan waktu, Lokasi, Pembicara, Kontak, Kode booking. list "Persiapan" (todo) dan "Dibawa" (bawa). add_calendar, open_maps, open_url link meeting, whatsapp.
 - Artikel, materi kuliah, tips: info Sumber dan "Ringkasan" (maksimal 3 poin dalam satu teks). Tutorial: list "Langkah" (steps). Daftar tempat atau tips: checklist (lainnya). open_url, open_maps.`;
 

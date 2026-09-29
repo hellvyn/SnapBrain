@@ -5,6 +5,7 @@
   "scripts": {
     "test": "vitest run",
     "build": "tsc --noEmit",
+    "eval": "vitest run --config vitest.eval.config.ts",
     "deploy": "wrangler deploy"
   },
   "keywords": [],
