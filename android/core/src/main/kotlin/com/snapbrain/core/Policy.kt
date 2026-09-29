@@ -40,3 +40,6 @@ fun deviceIdOf(androidId: String): String =
 
 /** MediaStore.createDeleteRequest needs API 30+ and a MediaStore uri (authority "media"). */
 fun canDeleteOriginal(sdkInt: Int, authority: String?): Boolean = sdkInt >= 30 && authority == "media"
+
+/** Spec S4/S17: Belanja, To-do, Bandingkan and Budget are Pro; everything stays open until Plan 3 adds billing. */
+const val IS_PRO = true
