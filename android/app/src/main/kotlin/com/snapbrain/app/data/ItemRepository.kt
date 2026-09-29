@@ -66,12 +66,41 @@ class ItemRepository(
 
     /** On app start: jobs lost to a force-stop or scheduled by an older build are brought back in line. */
     suspend fun resyncReminders() {
-        if (reminders.enabled.value) lists.remindable().forEach(reminders::sync)
+        if (reminders.enabled.value) lists.remindable().forEach(::syncRow)
+    }
+
+    /**
+     * Security F1: any app can push an image into ShareActivity, so a shared screenshot's reminders stay off until
+     * the user taps "Simpan" or opens it. Items from before this build are not in the set, so they count as confirmed.
+     */
+    fun isConfirmed(itemId: String): Boolean = itemId !in unconfirmed()
+
+    suspend fun confirm(id: String) {
+        if (clearUnconfirmed(id)) lists.rowsFor(id).forEach(reminders::sync)
+    }
+
+    /** Every reminder update except [confirm] goes through here. cancel() is safe: an unconfirmed row never had a notification posted. */
+    private fun syncRow(row: ListItemEntity) {
+        if (isConfirmed(row.itemId)) reminders.sync(row) else reminders.cancel(row.id)
+    }
+
+    // A separate prefs set, not a column: ItemEntity is written whole from stale copies, and no migration is needed.
+    private val unconfirmedLock = Any()
+
+    private fun unconfirmed(): Set<String> = synchronized(unconfirmedLock) { prefs.getStringSet(UNCONFIRMED, emptySet()).orEmpty() }
+
+    private fun markUnconfirmed(id: String) = synchronized(unconfirmedLock) {
+        prefs.edit().putStringSet(UNCONFIRMED, unconfirmed().toMutableSet().apply { add(id) }).apply()
+    }
+
+    private fun clearUnconfirmed(id: String): Boolean = synchronized(unconfirmedLock) {
+        val set = unconfirmed().toMutableSet()
+        set.remove(id).also { if (it) prefs.edit().putStringSet(UNCONFIRMED, set).apply() }
     }
 
     suspend fun toggleRemind(id: Long) {
         lists.toggleRemind(id)
-        lists.get(id)?.let(reminders::sync)
+        lists.get(id)?.let(::syncRow)
     }
 
     /** Saves the screenshot locally before any network call, so nothing is lost offline. */
@@ -93,6 +122,7 @@ class ItemRepository(
             ItemEntity(id, now, file.path, "", ItemStatus.UNPROCESSED.name)
         }
         dao.insert(item)
+        markUnconfirmed(id)
         item
     }
 
@@ -142,7 +172,7 @@ class ItemRepository(
             lists.insertAll(rows)
         }
         old.forEach { reminders.cancel(it.id) }
-        rows.zip(ids).forEach { (row, rowId) -> reminders.sync(row.copy(id = rowId)) }
+        rows.zip(ids).forEach { (row, rowId) -> syncRow(row.copy(id = rowId)) }
         prefs.edit().putInt(QUOTA_USED, response.quota.used).putInt(QUOTA_LIMIT, response.quota.limit).apply()
         _quota.value = response.quota
         return done
@@ -153,12 +183,12 @@ class ItemRepository(
 
     suspend fun toggleListItem(id: Long) {
         lists.toggle(id, System.currentTimeMillis())
-        lists.get(id)?.let(reminders::sync)
+        lists.get(id)?.let(::syncRow)
     }
 
     suspend fun setChecked(ids: List<Long>, checked: Boolean) {
         lists.setChecked(ids, checked, System.currentTimeMillis())
-        ids.forEach { rowId -> lists.get(rowId)?.let(reminders::sync) }
+        ids.forEach { rowId -> lists.get(rowId)?.let(::syncRow) }
     }
 
     suspend fun finishShopping() = lists.finishShopping()
@@ -192,6 +222,7 @@ class ItemRepository(
         const val QUOTA_USED = "quota_used"
         const val QUOTA_LIMIT = "quota_limit"
         const val BUDGET = "budget_month"
+        const val UNCONFIRMED = "unconfirmed_items"
     }
 
     private suspend fun retryLater(item: ItemEntity): ItemEntity {
@@ -230,6 +261,7 @@ class ItemRepository(
             lists.rowsFor(id).forEach { row -> reminders.cancel(row.id) }
             lists.deleteFor(id)
             dao.delete(id)
+            clearUnconfirmed(id)
         }
     }
 

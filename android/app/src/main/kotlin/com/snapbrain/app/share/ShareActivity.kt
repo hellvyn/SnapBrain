@@ -148,7 +148,7 @@ private fun ShareSheet(uri: Uri, repository: ItemRepository, onClose: () -> Unit
                     Text("Tersimpan. Akan diproses otomatis saat online.")
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TextButton(onClick = { scope.launch { itemId?.let { repository.discard(it) }; onClose() } }) { Text("Batal") }
-                        Button(onClick = onClose) { Text("Tutup") }
+                        Button(onClick = { scope.launch { itemId?.let { repository.confirm(it) }; onClose() } }) { Text("Simpan") }
                     }
                 }
                 ShareState.QuotaBlocked -> {
@@ -165,16 +165,20 @@ private fun ShareSheet(uri: Uri, repository: ItemRepository, onClose: () -> Unit
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TextButton(onClick = { scope.launch { repository.discard(item.id); onClose() } }) { Text("Batal") }
-                        Button(onClick = onClose) { Text("Simpan") }
+                        // Security F1: only "Simpan" (or opening the item) turns its reminders on; dismissing does not.
+                        Button(onClick = { scope.launch { repository.confirm(item.id); onClose() } }) { Text("Simpan") }
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && canDeleteOriginal(Build.VERSION.SDK_INT, uri.authority)) {
                             OutlinedButton(onClick = {
-                                try {
-                                    val request = MediaStore.createDeleteRequest(context.contentResolver, listOf(uri))
-                                    deleteOriginal.launch(IntentSenderRequest.Builder(request.intentSender).build())
-                                } catch (e: IllegalArgumentException) {
-                                    onClose()
-                                } catch (e: SecurityException) {
-                                    onClose()
+                                scope.launch {
+                                    repository.confirm(item.id)
+                                    try {
+                                        val request = MediaStore.createDeleteRequest(context.contentResolver, listOf(uri))
+                                        deleteOriginal.launch(IntentSenderRequest.Builder(request.intentSender).build())
+                                    } catch (e: IllegalArgumentException) {
+                                        onClose()
+                                    } catch (e: SecurityException) {
+                                        onClose()
+                                    }
                                 }
                             }) { Text("Simpan & Hapus Asli") }
                         }

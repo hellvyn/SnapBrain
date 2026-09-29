@@ -109,6 +109,8 @@ fun DetailScreen(id: String, repository: ItemRepository, onBack: () -> Unit) {
     var confirmDelete by remember { mutableStateOf(false) }
     var showImage by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)
+    // Security F1: opening a shared screenshot confirms it, which turns its reminders on.
+    LaunchedEffect(id) { repository.confirm(id) }
     val loaded = state as? DetailState.Loaded ?: return
     val current = loaded.item
     if (current == null) {

@@ -24,6 +24,7 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
         val source = repository.reminderRow(inputData.getLong(ROW_ID, -1)) ?: return Result.success()
         // Re-check at fire time: the row may have been checked or muted after scheduling.
         if (source.row.checked || !source.row.remind || !repository.remindersEnabled.value) return Result.success()
+        if (!repository.isConfirmed(source.row.itemId)) return Result.success() // shared but never confirmed (F1)
         if (!applicationContext.remindersCanPost()) return Result.success()
         post(applicationContext, source)
         return Result.success()
