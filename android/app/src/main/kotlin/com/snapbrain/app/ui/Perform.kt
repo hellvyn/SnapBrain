@@ -8,6 +8,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.AlarmClock
 import android.provider.CalendarContract
+import android.provider.Settings
 import android.widget.Toast
 import com.snapbrain.core.Action
 
@@ -47,6 +48,11 @@ fun Context.startTimer(minutes: Int, label: String) {
             .putExtra(AlarmClock.EXTRA_MESSAGE, label.take(60))
             .putExtra(AlarmClock.EXTRA_SKIP_UI, false),
     )
+}
+
+/** The system screen where the user can allow SnapBrain's notifications again. */
+fun Context.openNotificationSettings() {
+    launch(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
 }
 
 private fun view(url: String) = Intent(Intent.ACTION_VIEW, Uri.parse(url))

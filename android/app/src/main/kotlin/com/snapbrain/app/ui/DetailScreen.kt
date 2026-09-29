@@ -105,6 +105,7 @@ fun DetailScreen(id: String, repository: ItemRepository, onBack: () -> Unit) {
     val state by remember(id) { repository.observe(id).map<ItemEntity?, DetailState> { DetailState.Loaded(it) } }
         .collectAsState(initial = DetailState.Loading)
     val rows by remember(id) { repository.observeLists(id) }.collectAsState(initial = emptyList())
+    val remindersOn by repository.remindersEnabled.collectAsState()
     var confirmDelete by remember { mutableStateOf(false) }
     var showImage by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)
@@ -183,7 +184,9 @@ fun DetailScreen(id: String, repository: ItemRepository, onBack: () -> Unit) {
                 ListCard(
                     list,
                     now,
+                    remindersOn,
                     onToggle = { row -> scope.launch { repository.toggleListItem(row.id) } },
+                    onBell = { row -> scope.launch { repository.toggleRemind(row.id) } },
                     onCopy = { context.copyText(text) },
                     onShare = { context.shareText(text) },
                 )
@@ -280,7 +283,9 @@ private fun InfoCard(info: Map<String, String>) {
 private fun ListCard(
     rows: List<ListItemEntity>,
     now: LocalDateTime,
+    remindersOn: Boolean,
     onToggle: (ListItemEntity) -> Unit,
+    onBell: (ListItemEntity) -> Unit,
     onCopy: () -> Unit,
     onShare: () -> Unit,
 ) {
@@ -309,7 +314,9 @@ private fun ListCard(
                 strokeCap = StrokeCap.Round,
             )
             val shown = if (expanded || rows.size <= COLLAPSED_ROWS) rows else rows.take(COLLAPSED_ROWS)
-            shown.forEachIndexed { index, row -> ListRow(row, if (steps) index + 1 else null, now) { onToggle(row) } }
+            shown.forEachIndexed { index, row ->
+                ListRow(row, if (steps) index + 1 else null, now, remindersOn, onToggle = { onToggle(row) }, onBell = { onBell(row) })
+            }
             if (!expanded && rows.size > COLLAPSED_ROWS) {
                 TextButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
                     Text("Tampilkan semua (${rows.size})", fontWeight = FontWeight.Bold)
@@ -320,7 +327,7 @@ private fun ListCard(
 }
 
 @Composable
-private fun ListRow(row: ListItemEntity, number: Int?, now: LocalDateTime, onToggle: () -> Unit) {
+private fun ListRow(row: ListItemEntity, number: Int?, now: LocalDateTime, remindersOn: Boolean, onToggle: () -> Unit, onBell: () -> Unit) {
     val context = LocalContext.current
     Row(
         Modifier.fillMaxWidth().toggleable(value = row.checked, role = Role.Checkbox, onValueChange = { onToggle() }),
@@ -342,6 +349,7 @@ private fun ListRow(row: ListItemEntity, number: Int?, now: LocalDateTime, onTog
         if (row.minutes > 0) {
             Chip("${row.minutes} mnt", MaterialTheme.colorScheme.secondary, SnapIcons.Timer) { context.startTimer(row.minutes, row.text) }
         }
+        if (!row.due.isNullOrBlank()) ReminderBell(row.remind, remindersOn, onToggle = onBell)
     }
 }
 

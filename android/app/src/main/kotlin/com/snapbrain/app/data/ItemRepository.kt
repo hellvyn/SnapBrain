@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.room.withTransaction
 import com.snapbrain.app.process.ExtractClient
 import com.snapbrain.app.process.OcrEngine
+import com.snapbrain.app.reminder.ReminderScheduler
 import com.snapbrain.core.CompareColumn
 import com.snapbrain.core.ExtractData
 import com.snapbrain.core.ExtractJson
@@ -30,6 +31,7 @@ class ItemRepository(
     private val ocr: OcrEngine,
     private val client: ExtractClient,
     private val prefs: SharedPreferences,
+    private val reminders: ReminderScheduler,
 ) {
     private val dao = db.itemDao()
     private val lists = db.listItemDao()
@@ -43,6 +45,9 @@ class ItemRepository(
     /** Monthly shopping budget in rupiah; 0 means not set (spec §8). */
     val budget: StateFlow<Long> = _budget
 
+    /** Global reminder switch (spec §7). */
+    val remindersEnabled: StateFlow<Boolean> = reminders.enabled
+
     fun observe(query: String, category: String?) = dao.observe(query.trim(), category)
     fun observe(id: String) = dao.observeById(id)
     fun observeLists(id: String) = lists.observe(id)
@@ -50,6 +55,19 @@ class ItemRepository(
     fun observeBelanja() = lists.observeBelanja()
     fun observeTodo() = lists.observeTodo()
     fun observeSpent(since: Long) = lists.observeSpent(since)
+    fun observeHasDue() = lists.observeHasDue()
+
+    suspend fun reminderRow(id: Long): SourcedRow? = lists.sourced(id)
+
+    suspend fun setRemindersEnabled(on: Boolean) {
+        reminders.setEnabled(on)
+        if (on) lists.remindable().forEach(reminders::sync)
+    }
+
+    suspend fun toggleRemind(id: Long) {
+        lists.toggleRemind(id)
+        lists.get(id)?.let(reminders::sync)
+    }
 
     /** Saves the screenshot locally before any network call, so nothing is lost offline. */
     suspend fun capture(uri: Uri): ItemEntity = withContext(Dispatchers.IO) {
@@ -111,11 +129,15 @@ class ItemRepository(
             actions = ExtractJson.encodeActions(d.actions),
             activation = d.activation,
         )
-        db.withTransaction {
+        val old = lists.rowsFor(done.id)
+        val rows = listRowsOf(done.id, d)
+        val ids = db.withTransaction {
             dao.update(done)
             lists.deleteFor(done.id)
-            lists.insertAll(listRowsOf(done.id, d))
+            lists.insertAll(rows)
         }
+        old.forEach { reminders.cancel(it.id) }
+        rows.zip(ids).forEach { (row, rowId) -> reminders.sync(row.copy(id = rowId)) }
         prefs.edit().putInt(QUOTA_USED, response.quota.used).putInt(QUOTA_LIMIT, response.quota.limit).apply()
         _quota.value = response.quota
         return done
@@ -124,9 +146,15 @@ class ItemRepository(
     private fun savedQuota(): Quota? =
         if (prefs.contains(QUOTA_LIMIT)) Quota(prefs.getInt(QUOTA_USED, 0), prefs.getInt(QUOTA_LIMIT, 0)) else null
 
-    suspend fun toggleListItem(id: Long) = lists.toggle(id, System.currentTimeMillis())
+    suspend fun toggleListItem(id: Long) {
+        lists.toggle(id, System.currentTimeMillis())
+        lists.get(id)?.let(reminders::sync)
+    }
 
-    suspend fun setChecked(ids: List<Long>, checked: Boolean) = lists.setChecked(ids, checked, System.currentTimeMillis())
+    suspend fun setChecked(ids: List<Long>, checked: Boolean) {
+        lists.setChecked(ids, checked, System.currentTimeMillis())
+        ids.forEach { rowId -> lists.get(rowId)?.let(reminders::sync) }
+    }
 
     suspend fun finishShopping() = lists.finishShopping()
 
@@ -194,6 +222,7 @@ class ItemRepository(
     suspend fun discard(id: String) {
         dao.get(id)?.let {
             images.delete(it.imagePath)
+            lists.rowsFor(id).forEach { row -> reminders.cancel(row.id) }
             lists.deleteFor(id)
             dao.delete(id)
         }

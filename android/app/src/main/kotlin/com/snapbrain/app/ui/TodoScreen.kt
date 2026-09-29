@@ -44,6 +44,7 @@ import java.time.LocalDateTime
 fun TodoScreen(repository: ItemRepository, onOpen: (String) -> Unit) {
     val scope = rememberCoroutineScope()
     val rows: List<SourcedRow>? by remember { repository.observeTodo() }.collectAsState(initial = null)
+    val remindersOn by repository.remindersEnabled.collectAsState()
     var showDone by rememberSaveable { mutableStateOf(false) }
     val all = rows ?: return
     val now = remember(all) { LocalDateTime.now() }
@@ -95,7 +96,9 @@ fun TodoScreen(repository: ItemRepository, onOpen: (String) -> Unit) {
                                 TodoRow(
                                     source,
                                     now,
+                                    remindersOn,
                                     onToggle = { scope.launch { repository.toggleListItem(source.row.id) } },
+                                    onBell = { scope.launch { repository.toggleRemind(source.row.id) } },
                                     onOpen = { onOpen(source.row.itemId) },
                                 )
                             }
@@ -138,7 +141,7 @@ private fun GroupHeader(group: TodoGroup<SourcedRow>) {
 }
 
 @Composable
-private fun TodoRow(source: SourcedRow, now: LocalDateTime, onToggle: () -> Unit, onOpen: () -> Unit) {
+private fun TodoRow(source: SourcedRow, now: LocalDateTime, remindersOn: Boolean, onToggle: () -> Unit, onBell: () -> Unit, onOpen: () -> Unit) {
     val row = source.row
     Row(verticalAlignment = Alignment.CenterVertically) {
         Checkbox(
@@ -172,5 +175,6 @@ private fun TodoRow(source: SourcedRow, now: LocalDateTime, onToggle: () -> Unit
                 modifier = Modifier.padding(start = 8.dp),
             )
         }
+        if (!row.due.isNullOrBlank()) ReminderBell(row.remind, remindersOn, onToggle = onBell)
     }
 }

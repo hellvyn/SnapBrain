@@ -25,6 +25,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -39,7 +41,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import com.snapbrain.app.data.ItemEntity
 import com.snapbrain.app.data.ItemRepository
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -82,6 +87,9 @@ fun InboxScreen(
     val items: List<ItemEntity>? by remember(query, category) { repository.observe(query, category) }.collectAsState(initial = null)
     val progress by remember { repository.observeProgress().map { rows -> rows.associateBy { it.itemId } } }.collectAsState(initial = emptyMap())
     val quota by repository.quota.collectAsState()
+    val scope = rememberCoroutineScope()
+    val remindersOn by repository.remindersEnabled.collectAsState()
+    var menu by remember { mutableStateOf(false) }
     // Search and chips collapse as an overlay while scrolling down; the list viewport never resizes (spec S16).
     var headerHeightPx by headerHeightState
     var headerOffsetPx by remember { mutableFloatStateOf(0f) }
@@ -121,6 +129,19 @@ fun InboxScreen(
                 if (headerOffsetPx < -headerHeightPx / 2f) {
                     IconButton(onClick = { headerOffsetPx = 0f }) {
                         Icon(SnapIcons.Search, contentDescription = "Cari")
+                    }
+                }
+                Box {
+                    IconButton(onClick = { menu = true }) { Icon(SnapIcons.More, contentDescription = "Menu") }
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(if (remindersOn) "Matikan semua pengingat" else "Nyalakan pengingat") },
+                            leadingIcon = { Icon(if (remindersOn) SnapIcons.BellOff else SnapIcons.Bell, contentDescription = null) },
+                            onClick = {
+                                menu = false
+                                scope.launch { repository.setRemindersEnabled(!remindersOn) }
+                            },
+                        )
                     }
                 }
             }

@@ -25,6 +25,8 @@ object SnapIcons {
         "M15 5a3 3 0 1 0 6 0a3 3 0 1 0 -6 0M3 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0M15 19a3 3 0 1 0 6 0a3 3 0 1 0 -6 0M8.6 13.5l6.8 4M15.4 6.5l-6.8 4",
     )
     val Delete = icon("delete", "M3 6h18M8 6V4h8v2M6 6l1 14h10l1 -14")
+    val Bell = icon("bell", "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3 -2 3 -9M10 21h4")
+    val BellOff = icon("bell-off", "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3 -2 3 -9M10 21h4M3 3l18 18")
     val More = icon("more", "M5 12h0.01M12 12h0.01M19 12h0.01")
     val Image = icon("image", "M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3H6a3 3 0 0 1 -3 -3zM7 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M21 15l-5 -5L5 21")
     val Link = icon("link", "M14 4h6v6M20 4l-9 9M18 14v6H4V6h6")
