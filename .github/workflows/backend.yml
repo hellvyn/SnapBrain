@@ -1,6 +1,7 @@
 name: backend
 on:
   push:
+    branches: [main]
     paths: ["functions/**", "firestore.rules", "firebase.json", ".github/workflows/backend.yml"]
   pull_request:
     paths: ["functions/**", "firestore.rules", "firebase.json", ".github/workflows/backend.yml"]
