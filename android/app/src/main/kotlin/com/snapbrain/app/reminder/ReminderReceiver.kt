@@ -1,6 +1,5 @@
 package com.snapbrain.app.reminder
 
-import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -9,7 +8,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-/** The notification's "Selesai" button: checks the row (which also cancels its other slot) and clears the alert. */
+/** The notification's "Selesai" button: checks the row, which cancels its other slot and clears the alert. */
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != ACTION_DONE) return
@@ -19,7 +18,8 @@ class ReminderReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 repository.setChecked(listOf(id), true)
-                context.getSystemService(NotificationManager::class.java).cancel(NOTIFICATION_TAG, id.toInt())
+            } catch (e: Exception) {
+                // A DB error must not crash the process from a notification tap; the alert simply stays.
             } finally {
                 pending.finish()
             }

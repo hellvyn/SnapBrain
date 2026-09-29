@@ -61,7 +61,12 @@ class ItemRepository(
 
     suspend fun setRemindersEnabled(on: Boolean) {
         reminders.setEnabled(on)
-        if (on) lists.remindable().forEach(reminders::sync)
+        resyncReminders()
+    }
+
+    /** On app start: jobs lost to a force-stop or scheduled by an older build are brought back in line. */
+    suspend fun resyncReminders() {
+        if (reminders.enabled.value) lists.remindable().forEach(reminders::sync)
     }
 
     suspend fun toggleRemind(id: Long) {

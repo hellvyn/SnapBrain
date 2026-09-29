@@ -1,5 +1,6 @@
 package com.snapbrain.app.reminder
 
+import android.app.NotificationManager
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.work.ExistingWorkPolicy
@@ -34,8 +35,11 @@ class ReminderScheduler(context: Context, private val prefs: SharedPreferences) 
 
     /** Brings the jobs for [row] in line with its current state: checked, bell off or switch off means none. */
     fun sync(row: ListItemEntity) {
-        cancel(row.id)
-        if (!_enabled.value || !row.remind || row.checked) return
+        if (!_enabled.value || !row.remind || row.checked) {
+            cancel(row.id)
+            return
+        }
+        cancelJobs(row.id) // a still-reminding row keeps its visible notification
         val now = ZonedDateTime.now()
         val nowMillis = now.toInstant().toEpochMilli()
         reminderTimes(row.due, now).forEach { time ->
@@ -48,7 +52,13 @@ class ReminderScheduler(context: Context, private val prefs: SharedPreferences) 
         }
     }
 
+    /** The row stopped reminding: drop its jobs and any notification already showing. */
     fun cancel(rowId: Long) {
+        cancelJobs(rowId)
+        appContext.getSystemService(NotificationManager::class.java).cancel(NOTIFICATION_TAG, rowId.toInt())
+    }
+
+    private fun cancelJobs(rowId: Long) {
         ReminderSlot.entries.forEach { work.cancelUniqueWork(name(rowId, it)) }
     }
 

@@ -1,6 +1,5 @@
 package com.snapbrain.app.ui
 
-import android.app.NotificationManager
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -34,6 +33,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import com.snapbrain.app.SnapBrainApp
 import com.snapbrain.app.process.ProcessWorker
+import com.snapbrain.app.reminder.remindersCanPost
 import com.snapbrain.core.IS_PRO
 
 /** Spec §8 bottom navigation. */
@@ -53,7 +53,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val repository = (application as SnapBrainApp).container.repository
         val freshStart = savedInstanceState == null
-        if (freshStart) openRequest.value = intent.getStringExtra(EXTRA_OPEN_ITEM)
+        // Relaunching from Recents replays the notification's intent; it must not reopen that item.
+        val fromHistory = (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0
+        if (freshStart && !fromHistory) openRequest.value = intent.getStringExtra(EXTRA_OPEN_ITEM)
         val fromNotification = openRequest.value != null
         setContent {
             SnapBrainTheme {
@@ -62,6 +64,7 @@ class MainActivity : ComponentActivity() {
                     if (freshStart) {
                         LaunchedEffect(Unit) {
                             repository.requeueQuotaBlocked()
+                            repository.resyncReminders()
                             ProcessWorker.enqueue(applicationContext)
                         }
                     }
@@ -130,8 +133,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Covers both the Android 13+ permission and notifications switched off in system settings.
-        notificationsAllowed.value = getSystemService(NotificationManager::class.java).areNotificationsEnabled()
+        // Covers the Android 13+ permission, notifications switched off in system settings and a blocked channel.
+        notificationsAllowed.value = remindersCanPost()
     }
 
     companion object {

@@ -24,6 +24,7 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
         val source = repository.reminderRow(inputData.getLong(ROW_ID, -1)) ?: return Result.success()
         // Re-check at fire time: the row may have been checked or muted after scheduling.
         if (source.row.checked || !source.row.remind || !repository.remindersEnabled.value) return Result.success()
+        if (!applicationContext.remindersCanPost()) return Result.success()
         post(applicationContext, source)
         return Result.success()
     }
@@ -33,10 +34,16 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
     }
 }
 
+/** False when notifications are off for the app (or the Android 13+ permission) or the "Pengingat" channel is blocked. */
+fun Context.remindersCanPost(): Boolean {
+    val manager = getSystemService(NotificationManager::class.java)
+    return manager.areNotificationsEnabled() &&
+        manager.getNotificationChannel(CHANNEL_ID)?.importance != NotificationManager.IMPORTANCE_NONE
+}
+
 /** Spec §7: "⏰ <teks> — besok", "dari: <judul>", tap opens Detail, "Selesai" checks the row. */
 private fun post(context: Context, source: SourcedRow) {
     val manager = context.getSystemService(NotificationManager::class.java)
-    if (!manager.areNotificationsEnabled()) return
     val row = source.row
     val code = row.id.toInt()
     val open = PendingIntent.getActivity(

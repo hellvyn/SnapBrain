@@ -1,5 +1,6 @@
 package com.snapbrain.app.share
 
+import android.content.ContentResolver
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -71,7 +72,8 @@ class ShareActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val uri = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
             ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
-        if (uri == null) {
+        // Only shared content; a file:// uri could point SnapBrain at its own private files.
+        if (uri == null || uri.scheme != ContentResolver.SCHEME_CONTENT) {
             finish()
             return
         }

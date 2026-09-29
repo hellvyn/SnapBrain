@@ -57,11 +57,16 @@ fun Context.openNotificationSettings() {
 
 private fun view(url: String) = Intent(Intent.ACTION_VIEW, Uri.parse(url))
 
-/** Starts [intent]; returns false, telling the user unless [quiet], when no app can handle it. */
-private fun Context.launch(intent: Intent, quiet: Boolean = false): Boolean = try {
-    startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    true
-} catch (e: ActivityNotFoundException) {
+/** Starts [intent]; returns false, telling the user unless [quiet], when no app can (or may) handle it. */
+private fun Context.launch(intent: Intent, quiet: Boolean = false): Boolean {
+    try {
+        startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        return true
+    } catch (e: ActivityNotFoundException) {
+        // fall through
+    } catch (e: SecurityException) {
+        // The resolved activity is not exported or needs a permission we lack.
+    }
     if (!quiet) Toast.makeText(this, "Tidak ada aplikasi untuk membuka ini", Toast.LENGTH_SHORT).show()
-    false
+    return false
 }
