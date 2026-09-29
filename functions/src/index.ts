@@ -22,7 +22,7 @@ const PACKAGE_NAME = defineString("PACKAGE_NAME", { default: "com.snapbrain.app"
 const ADMOB_AD_UNIT_ID = defineString("ADMOB_AD_UNIT_ID"); // no default: deploy must ask (fail-closed)
 
 let anthropic: Anthropic | undefined;
-const llmClient = () => (anthropic ??= new Anthropic({ apiKey: ANTHROPIC_API_KEY.value(), timeout: 20_000, maxRetries: 1 }));
+const llmClient = () => (anthropic ??= new Anthropic({ apiKey: ANTHROPIC_API_KEY.value(), timeout: 20_000, maxRetries: 0 }));
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -35,6 +35,7 @@ async function toHttpsErrors<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } catch (e) {
+    if (e instanceof HttpsError) throw e;
     if (e instanceof ApiError) throw new HttpsError(e.code, e.message);
     logger.error("unhandled", { error: errorText(e) }); // never log request data: it holds OCR text
     throw new HttpsError("internal", "internal");
@@ -42,7 +43,7 @@ async function toHttpsErrors<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 export const extract = onCall(
-  { region: REGION, enforceAppCheck: true, secrets: [ANTHROPIC_API_KEY, DEVICE_SALT], timeoutSeconds: 30 },
+  { region: REGION, enforceAppCheck: true, secrets: [ANTHROPIC_API_KEY, DEVICE_SALT], timeoutSeconds: 60 },
   (req) =>
     toHttpsErrors(() =>
       handleExtract(authedData(req), {
