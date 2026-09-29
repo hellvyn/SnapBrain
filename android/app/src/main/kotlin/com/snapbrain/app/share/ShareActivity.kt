@@ -50,6 +50,7 @@ import com.snapbrain.core.categoryLabel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -69,6 +70,7 @@ class ShareActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val uri = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
+            ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
         if (uri == null) {
             finish()
             return
@@ -99,6 +101,11 @@ private fun ShareSheet(uri: Uri, repository: ItemRepository, onClose: () -> Unit
             return@LaunchedEffect
         }
         itemId = item.id
+        if (!isActive) {
+            // Sheet dismissed during "Mengekstrak teks...": hand the item to the worker.
+            if (item.status == ItemStatus.UNPROCESSED.name) ProcessWorker.enqueue(context.applicationContext)
+            return@LaunchedEffect
+        }
         if (item.status == ItemStatus.DONE.name) {
             state = ShareState.Result(item)
             return@LaunchedEffect

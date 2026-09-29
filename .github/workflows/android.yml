@@ -1,4 +1,6 @@
 name: android
+permissions:
+  contents: read
 on:
   push:
     branches: [main]
@@ -18,9 +20,14 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
-      - name: Dummy google-services.json (real one stays off git)
+      - name: google-services.json (real from secret, dummy otherwise)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
-          cat > app/google-services.json <<'JSON'
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+          else
+            cat > app/google-services.json <<'JSON'
           {
             "project_info": { "project_number": "000000000000", "project_id": "snapbrain-ci", "storage_bucket": "snapbrain-ci.appspot.com" },
             "client": [{
@@ -32,9 +39,8 @@ jobs:
             "configuration_version": "1"
           }
           JSON
+          fi
       - run: ./gradlew --no-daemon :core:test assembleDebug compileReleaseKotlin
-      - name: Print resolved dynamic versions
-        run: ./gradlew --no-daemon :app:dependencies --configuration releaseRuntimeClasspath | grep -E "firebase-bom|text-recognition|google-services" || true
       - uses: actions/upload-artifact@v4
         with:
           name: snapbrain-debug-apk

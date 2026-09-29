@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.snapbrain.app.data.ItemEntity
 import com.snapbrain.app.data.ItemRepository
 
 private val FILTERS = listOf(
@@ -48,7 +49,7 @@ fun InboxScreen(
     listState: LazyListState,
     onOpen: (String) -> Unit,
 ) {
-    val items by remember(query, category) { repository.observe(query, category) }.collectAsState(initial = emptyList())
+    val items: List<ItemEntity>? by remember(query, category) { repository.observe(query, category) }.collectAsState(initial = null)
 
     Scaffold(topBar = { TopAppBar(title = { Text("SnapBrain") }) }) { padding ->
         Column(Modifier.padding(padding)) {
@@ -69,7 +70,9 @@ fun InboxScreen(
                     FilterChip(selected = category == key, onClick = { onCategoryChange(key) }, label = { Text(label) })
                 }
             }
-            if (items.isEmpty()) {
+            val list = items
+            if (list == null) return@Column
+            if (list.isEmpty()) {
                 Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
                     Text(
                         if (query.isBlank() && category == null) {
@@ -82,7 +85,7 @@ fun InboxScreen(
                 }
             } else {
                 LazyColumn(state = listState) {
-                    items(items, key = { it.id }) { item -> SmartCard(item, onClick = { onOpen(item.id) }) }
+                    items(list, key = { it.id }) { item -> SmartCard(item, onClick = { onOpen(item.id) }) }
                 }
             }
         }

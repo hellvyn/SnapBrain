@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -63,6 +64,7 @@ fun DetailScreen(id: String, repository: ItemRepository, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     val state by remember(id) { repository.observe(id).map<ItemEntity?, DetailState> { DetailState.Loaded(it) } }
         .collectAsState(initial = DetailState.Loading)
+    var confirmDelete by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)
     val loaded = state as? DetailState.Loaded ?: return
     val current = loaded.item
@@ -80,11 +82,22 @@ fun DetailScreen(id: String, repository: ItemRepository, onBack: () -> Unit) {
                 title = { Text(current.title ?: "Detail") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("←") } },
                 actions = {
-                    TextButton(onClick = { scope.launch { repository.discard(id); onBack() } }) { Text("Hapus") }
+                    TextButton(onClick = { confirmDelete = true }) { Text("Hapus") }
                 },
             )
         },
     ) { padding ->
+        if (confirmDelete) {
+            AlertDialog(
+                onDismissRequest = { confirmDelete = false },
+                title = { Text("Hapus screenshot ini?") },
+                text = { Text("Screenshot dan hasilnya akan dihapus dari SnapBrain.") },
+                confirmButton = {
+                    TextButton(onClick = { confirmDelete = false; scope.launch { repository.discard(id); onBack() } }) { Text("Hapus") }
+                },
+                dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Batal") } },
+            )
+        }
         LazyColumn(
             Modifier.padding(padding),
             contentPadding = PaddingValues(16.dp),
