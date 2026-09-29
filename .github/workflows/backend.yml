@@ -1,0 +1,27 @@
+name: backend
+on:
+  push:
+    branches: [main]
+    paths: ["functions/**", "firestore.rules", "firebase.json", ".github/workflows/backend.yml"]
+  pull_request:
+    paths: ["functions/**", "firestore.rules", "firebase.json", ".github/workflows/backend.yml"]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: functions
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm run build
+      - run: npm test

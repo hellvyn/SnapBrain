@@ -1,0 +1,47 @@
+name: android
+permissions:
+  contents: read
+on:
+  push:
+    branches: [main]
+    paths: ["android/**", ".github/workflows/android.yml"]
+  pull_request:
+    paths: ["android/**", ".github/workflows/android.yml"]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: google-services.json (real from secret, dummy otherwise)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+          else
+            cat > app/google-services.json <<'JSON'
+          {
+            "project_info": { "project_number": "000000000000", "project_id": "snapbrain-ci", "storage_bucket": "snapbrain-ci.appspot.com" },
+            "client": [{
+              "client_info": { "mobilesdk_app_id": "1:000000000000:android:0000000000000000", "android_client_info": { "package_name": "com.snapbrain.app" } },
+              "oauth_client": [],
+              "api_key": [{ "current_key": "AIzaSyDUMMY-DUMMY-DUMMY-DUMMY-DUMMY00" }],
+              "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+            }],
+            "configuration_version": "1"
+          }
+          JSON
+          fi
+      - run: ./gradlew --no-daemon :core:test assembleDebug compileReleaseKotlin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snapbrain-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk

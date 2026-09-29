@@ -1,0 +1,9 @@
+functions/node_modules/
+functions/lib/
+*-debug.log
+google-services.json
+
+android/**/build/
+android/**/.gradle/
+android/**/.kotlin/
+android/local.properties
