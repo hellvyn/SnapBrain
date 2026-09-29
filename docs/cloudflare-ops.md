@@ -20,6 +20,13 @@ Semua langkah gratis dan tidak butuh kartu.
    - `LLM_MODEL` (default `auto`), limit kuota, dan `ADMOB_AD_UNIT_ID` adalah `vars` di `worker/wrangler.jsonc`. Setiap deploy CI menimpanya, jadi jangan diubah lewat dashboard. Ubah di `worker/wrangler.jsonc` lalu merge ke `main` (atau minta Claude yang mengubahnya).
    - Hanya secret yang diisi lewat dashboard: `LLM_API_KEY`, `DEVICE_SALT`, dan `PLAY_SERVICE_ACCOUNT_JSON` (baru dibutuhkan di Rencana 3).
 
+## Mode beta (spec S20)
+
+- `worker/wrangler.jsonc` → `APP_CHECK_MODE: "optional"`: permintaan tanpa token App Check yang valid tetap dilayani, tapi semuanya berbagi `BETA_DAILY_CAP` (300/hari UTC, tabel `unverified_daily`). Melewati batas → app menampilkan "Kuota habis" dan mencoba lagi saat app dibuka ulang.
+- Mengubah batas: ubah `BETA_DAILY_CAP` di `worker/wrangler.jsonc`, merge ke `main` (jangan lewat dashboard; deploy menimpanya).
+- Mematikan mode beta (wajib sebelum rilis): `APP_CHECK_MODE: "enforce"`, merge ke `main`. Setelah itu hanya HP dengan token App Check terdaftar (debug) atau instalasi dari Google Play (Play Integrity) yang dilayani.
+- Cek pemakaian: D1 → `snapbrain` → Console: `SELECT * FROM unverified_daily ORDER BY day DESC LIMIT 7;`
+
 ## Smoke test setelah deploy pertama
 
 - Kirim `item_id` yang sama dua kali ke `/extract`: kuota hanya berkurang sekali.

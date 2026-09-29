@@ -46,7 +46,20 @@ describe("router", () => {
     expect(noAuth.status).toBe(401);
     expect(await noAuth.json()).toEqual({ error: "UNAUTHENTICATED" });
     const { "x-firebase-appcheck": _, ...noAppCheck } = headers;
-    expect((await extract(withSecrets, {}, noAppCheck)).status).toBe(403);
+    expect((await extract({ ...withSecrets, APP_CHECK_MODE: "enforce" }, {}, noAppCheck)).status).toBe(403);
+  });
+
+  it("beta mode serves requests without App Check up to a shared daily cap", async () => {
+    const { "x-firebase-appcheck": _, ...noAppCheck } = headers;
+    const beta = { ...withSecrets, APP_CHECK_MODE: "optional", BETA_DAILY_CAP: "2" };
+    const body = () => ({ ocr_text: "Kerjakan laporan", device_id: newDeviceId(), item_id: crypto.randomUUID() });
+    expect((await extract(beta, body(), noAppCheck)).status).toBe(200);
+    expect((await extract(beta, body(), noAppCheck)).status).toBe(200);
+    const over = await extract(beta, body(), noAppCheck);
+    expect(over.status).toBe(429);
+    expect(await over.json()).toEqual({ error: "RESOURCE_EXHAUSTED" });
+    // Verified requests never touch the beta cap.
+    expect((await extract(beta, body())).status).toBe(200);
   });
 
   it("maps invalid input to 400 and unknown routes to 404", async () => {

@@ -23,7 +23,15 @@ class ExtractClient(private val deviceId: String, private val baseUrl: String) {
         val auth = Firebase.auth
         if (auth.currentUser == null) auth.signInAnonymously().await()
         val idToken = auth.currentUser?.getIdToken(false)?.await()?.token
-        val appCheck = Firebase.appCheck.getAppCheckToken(false).await().token
+        // Beta (spec S20): a phone without a registered App Check token still sends; the server decides.
+        val appCheck = try {
+            Firebase.appCheck.getAppCheckToken(false).await().token
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("Extract", "AppCheck ${e.javaClass.simpleName}")
+            null
+        }
         if (idToken == null) {
             ExtractOutcome.Retryable
         } else {
@@ -54,7 +62,7 @@ class ExtractClient(private val deviceId: String, private val baseUrl: String) {
         ExtractOutcome.Retryable
     }
 
-    private fun post(url: String, body: String, idToken: String, appCheck: String): Pair<Int, String> {
+    private fun post(url: String, body: String, idToken: String, appCheck: String?): Pair<Int, String> {
         val conn = URL(url).openConnection() as HttpURLConnection
         try {
             conn.requestMethod = "POST"
@@ -63,7 +71,7 @@ class ExtractClient(private val deviceId: String, private val baseUrl: String) {
             conn.doOutput = true
             conn.setRequestProperty("content-type", "application/json")
             conn.setRequestProperty("authorization", "Bearer $idToken")
-            conn.setRequestProperty("x-firebase-appcheck", appCheck)
+            if (appCheck != null) conn.setRequestProperty("x-firebase-appcheck", appCheck)
             conn.outputStream.use { it.write(body.toByteArray()) }
             val code = conn.responseCode
             val stream = if (code in 200..299) conn.inputStream else conn.errorStream

@@ -18,6 +18,9 @@
     "FIREBASE_PROJECT_ID": "snapbrain-hellvyn",
     "FIREBASE_PROJECT_NUMBER": "472964840390",
     "PACKAGE_NAME": "com.snapbrain.app",
-    "ADMOB_AD_UNIT_ID": ""
+    "ADMOB_AD_UNIT_ID": "",
+    // Beta testing only (spec S20): back to "enforce" before release (Plan 3).
+    "APP_CHECK_MODE": "optional",
+    "BETA_DAILY_CAP": "300"
   }
 }

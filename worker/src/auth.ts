@@ -18,7 +18,8 @@ export async function verifyRequest(
   headers: Headers,
   project: { id: string; number: string },
   keys: AuthKeys,
-): Promise<{ uid: string }> {
+  appCheckRequired = true,
+): Promise<{ uid: string; appCheck: boolean }> {
   const bearer = headers.get("authorization")?.match(/^Bearer (.+)$/)?.[1];
   if (!bearer) throw new ApiError("unauthenticated", "missing id token");
   let uid: string;
@@ -35,7 +36,10 @@ export async function verifyRequest(
   }
 
   const appCheck = headers.get("x-firebase-appcheck");
-  if (!appCheck) throw new ApiError("failed-precondition", "missing app check");
+  if (!appCheck) {
+    if (appCheckRequired) throw new ApiError("failed-precondition", "missing app check");
+    return { uid, appCheck: false };
+  }
   try {
     await jwtVerify(appCheck, keys.appCheck, {
       issuer: `https://firebaseappcheck.googleapis.com/${project.number}`,
@@ -43,7 +47,8 @@ export async function verifyRequest(
       algorithms: ["RS256"],
     });
   } catch {
-    throw new ApiError("failed-precondition", "invalid app check");
+    if (appCheckRequired) throw new ApiError("failed-precondition", "invalid app check");
+    return { uid, appCheck: false };
   }
-  return { uid };
+  return { uid, appCheck: true };
 }

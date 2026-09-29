@@ -15,6 +15,9 @@ export interface Env {
   PACKAGE_NAME: string;
   ADMOB_AD_UNIT_ID: string;
   PLAY_SERVICE_ACCOUNT_JSON?: string;
+  /** "enforce" (default) or "optional": beta testing lets requests without a valid App Check token through, under BETA_DAILY_CAP. */
+  APP_CHECK_MODE?: string;
+  BETA_DAILY_CAP?: string;
 }
 
 export const limitsOf = (env: Env): QuotaLimits => ({
