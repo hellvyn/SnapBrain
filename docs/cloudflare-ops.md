@@ -12,6 +12,7 @@ Semua langkah gratis dan tidak butuh kartu.
 6. **Secret Worker:** Dashboard → Workers & Pages → `snapbrain-api` → Settings → Variables and Secrets → Add → type **Secret**:
    - `LLM_API_KEY` = key dari dashboard freellm.
    - `DEVICE_SALT` = teks acak panjang (misalnya 40 karakter campuran). **Jangan pernah diganti** setelah rilis, karena semua kuota akan ter-reset.
+   - Periksa kolom **Type** di daftar: harus tertulis **Secret**. Nilai bertipe Text/Variable **dihapus oleh setiap deploy CI** (`wrangler deploy` mengganti semua variable dengan isi `wrangler.jsonc`), lalu `/extract` menjawab `UNAVAILABLE` dan semua item di app berakhir "Gagal". Riwayat versi yang menulis "Add variable: LLM_API_KEY" berarti tipenya salah.
 7. **URL Worker:** tertulis di halaman Worker, bentuknya `https://snapbrain-api.<subdomain>.workers.dev`. Simpan di GitHub **Variables** sebagai `SNAPBRAIN_API_URL`. URL ini dibaca saat APK dibangun, jadi setelah variabel diisi, jalankan ulang workflow `android`: tab Actions → `android` → **Run workflow**, lalu unduh APK baru dari artifact `snapbrain-debug-apk`. APK yang dibangun sebelum variabel ini diisi menuju `snapbrain-api.invalid`, sehingga semua item gagal.
 8. **Firebase Console (plan Spark, gratis):** Authentication → Sign-in method → **Anonymous** → Enable. App Check → daftarkan app Android dengan Play Integrity. Untuk APK debug, pakai **Manage debug tokens**.
 9. **Opsional:**
