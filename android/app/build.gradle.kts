@@ -9,7 +9,7 @@ apply(plugin = "com.google.gms.google-services")
 
 android {
     namespace = "com.snapbrain.app"
-    compileSdk = 36
+    compileSdk = 37
     defaultConfig {
         applicationId = "com.snapbrain.app"
         minSdk = 26
