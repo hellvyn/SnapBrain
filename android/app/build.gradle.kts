@@ -22,6 +22,16 @@ android {
             "\"${(project.findProperty("snapbrainApiUrl") as String?)?.trimEnd('/') ?: "https://snapbrain-api.invalid"}\"",
         )
     }
+    // One committed debug key so every CI APK installs over the previous one (keeps data and the App Check debug token).
+    // Debug only; the release key stays out of the repo.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
     buildFeatures { compose = true; buildConfig = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

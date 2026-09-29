@@ -4,6 +4,8 @@ Artifact CI hanya terhubung ke backend asli jika repo secret `GOOGLE_SERVICES_JS
 
 Prasyarat: backend Cloudflare sudah di-deploy dan secret Worker diisi (docs/cloudflare-ops.md langkah 1–8). Token debug App Check sudah didaftarkan: buka app sekali (force stop dulu bila sudah terbuka) dengan HP tersambung ke Android Studio, filter Logcat dengan `App Check debug token`, lalu tempel kode setelah "debug token:" di Firebase Console → App Check → Manage debug tokens. Tanpa backend, item tampil "Menunggu internet" dan berubah menjadi "Gagal, coba lagi" setelah 5 percobaan.
 
+Sejak build dengan `android/app/debug.keystore` (29 Sep), semua APK debug CI ditandatangani kunci yang sama, jadi APK baru bisa dipasang langsung di atas yang lama; data dan token debug App Check tetap. APK dari sebelum itu harus di-uninstall sekali dulu, lalu token debug App Check yang baru didaftarkan. Item yang gagal karena token belum terdaftar tampil "Mencoba ulang (n/5)" lalu "Gagal, coba lagi"; setelah token didaftarkan, buka item itu dan tekan "Coba lagi".
+
 1. Buka SnapBrain. Inbox kosong menampilkan "Belum ada screenshot...".
 2. Galeri → pilih screenshot struk transfer → Share → SnapBrain. Sheet muncul, lalu tampil "Mengekstrak teks..." dan "AI sedang menganalisis konteks...". Hasil tampil dengan kategori 💰 Keuangan dan tombol Salin/aksi.
 3. Tekan "Simpan & Hapus Asli" (Android 11+). Tombol ini hanya muncul untuk sumber MediaStore (Galeri Samsung/AOSP, tombol Share di notifikasi screenshot), tidak untuk Google Photos. Dialog sistem muncul. Setelah disetujui, foto hilang dari galeri dan item tetap ada di Inbox. Buka Detail: gambarnya tampil.

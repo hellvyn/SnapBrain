@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.snapbrain.app.data.ItemEntity
 import com.snapbrain.app.data.ItemProgress
 import com.snapbrain.core.ItemStatus
+import com.snapbrain.core.MAX_ATTEMPTS
 import com.snapbrain.core.dueLabel
 import java.text.DateFormat
 import java.time.LocalDateTime
@@ -37,7 +38,8 @@ import java.util.Date
 import java.util.Locale
 
 fun statusText(item: ItemEntity): String? = when (item.status) {
-    ItemStatus.UNPROCESSED.name -> "Menunggu internet"
+    // attempts > 0 means a call already failed (network, server or app verification), so "internet" may be wrong.
+    ItemStatus.UNPROCESSED.name -> if (item.attempts == 0) "Menunggu internet" else "Mencoba ulang (${item.attempts}/$MAX_ATTEMPTS)"
     ItemStatus.QUOTA_BLOCKED.name -> "Kuota habis"
     ItemStatus.FAILED.name -> "Gagal, coba lagi"
     else -> null
