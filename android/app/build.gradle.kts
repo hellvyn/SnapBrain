@@ -42,12 +42,11 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.12.0")
     implementation("io.coil-kt.coil3:coil-compose:3.6.3")
 
-    // Pinned in Step 7 from the versions CI resolves.
-    implementation(platform("com.google.firebase:firebase-bom:latest.release"))
+    implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-functions")
     implementation("com.google.firebase:firebase-appcheck-playintegrity")
     debugImplementation("com.google.firebase:firebase-appcheck-debug")
-    implementation("com.google.mlkit:text-recognition:latest.release")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.11.0")
 }

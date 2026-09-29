@@ -1,8 +1,7 @@
 buildscript {
     repositories { google() }
     dependencies {
-        // Pinned in Step 7 from the version CI resolves.
-        classpath("com.google.gms:google-services:latest.release")
+        classpath("com.google.gms:google-services:4.5.0")
     }
 }
 

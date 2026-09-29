@@ -35,8 +35,6 @@ jobs:
       - run: ./gradlew --no-daemon :core:test assembleDebug
       - name: Print resolved dynamic versions
         run: ./gradlew --no-daemon :app:dependencies --configuration releaseRuntimeClasspath | grep -E "firebase-bom|text-recognition|google-services" || true
-      - name: TEMP google-services version
-        run: ./gradlew --no-daemon buildEnvironment | grep google-services || true
       - uses: actions/upload-artifact@v4
         with:
           name: snapbrain-debug-apk
