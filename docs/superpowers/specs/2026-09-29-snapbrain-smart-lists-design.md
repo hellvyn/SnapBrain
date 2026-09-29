@@ -199,7 +199,7 @@ Mockup yang disetujui: canvas "SnapBrain UI Directions", baris **B (terang)** â€
 2. **Kartu judul** berwarna tile kategori:
    - ikon + nama kategori;
    - judul;
-   - **tombol aktivasi** (tombol utama) sesuai `activation`: Masak sekarang, Mau beli, Kerjakan, Bayar, Ikut acara, Coba sekarang.
+   - **tombol aktivasi** (tombol utama) sesuai `activation`: Masak sekarang, Mau beli, Kerjakan, Bayar, Ikut acara, Coba sekarang. Tombol ini tampil mulai **Fase C**, bersama tab Belanja dan To-do yang menjadi tujuannya. Fase A sudah menyimpan `activation` dari server.
      - Setelah ditekan menjadi "âœ“ Ada di To-do/Belanja"; tap lagi untuk mengeluarkan.
      - Tidak tampil bila `none`.
 3. **"Lihat screenshot asli"**: gambar tidak tampil sampai tombol ini ditekan. Gambar lalu dibuka layar penuh dengan zoom (komponen zoom yang sudah ada).
