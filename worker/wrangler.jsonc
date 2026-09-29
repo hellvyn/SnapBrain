@@ -17,7 +17,7 @@
     "LLM_MODEL": "auto",
     "FIREBASE_PROJECT_ID": "snapbrain-hellvyn",
     "FIREBASE_PROJECT_NUMBER": "472964840390",
-    "PACKAGE_NAME": "com.snapbrain.app",
+    "PACKAGE_NAME": "id.hellvyn.snapbrain",
     "ADMOB_AD_UNIT_ID": "",
     // Beta testing only (spec S20): back to "enforce" before release (Plan 3).
     "APP_CHECK_MODE": "optional",

@@ -11,7 +11,8 @@ android {
     namespace = "com.snapbrain.app"
     compileSdk = 37
     defaultConfig {
-        applicationId = "com.snapbrain.app"
+        // "com.snapbrain.app" is taken on Android; this id is registered to hellvyn in the Android Developer Console.
+        applicationId = "id.hellvyn.snapbrain"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
@@ -31,6 +32,18 @@ android {
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
+        // Release key comes only from CI secrets (never the repo); without them the release build stays unsigned.
+        System.getenv("RELEASE_KEYSTORE_PATH")?.let { path ->
+            create("release") {
+                storeFile = file(path)
+                storePassword = System.getenv("RELEASE_STORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+    buildTypes {
+        getByName("release") { signingConfig = signingConfigs.findByName("release") }
     }
     buildFeatures { compose = true; buildConfig = true }
     compileOptions {

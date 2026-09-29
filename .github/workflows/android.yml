@@ -34,7 +34,7 @@ jobs:
           {
             "project_info": { "project_number": "000000000000", "project_id": "snapbrain-ci", "storage_bucket": "snapbrain-ci.appspot.com" },
             "client": [{
-              "client_info": { "mobilesdk_app_id": "1:000000000000:android:0000000000000000", "android_client_info": { "package_name": "com.snapbrain.app" } },
+              "client_info": { "mobilesdk_app_id": "1:000000000000:android:0000000000000000", "android_client_info": { "package_name": "id.hellvyn.snapbrain" } },
               "oauth_client": [],
               "api_key": [{ "current_key": "AIzaSyDUMMY-DUMMY-DUMMY-DUMMY-DUMMY00" }],
               "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
@@ -43,9 +43,35 @@ jobs:
           }
           JSON
           fi
+      - name: release keystore (from secret, if set)
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$RELEASE_KEYSTORE_BASE64" ]; then
+            printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "RELEASE_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          fi
       - name: build
-        run: ./gradlew --no-daemon :core:test assembleDebug compileReleaseKotlin ${SNAPBRAIN_API_URL:+-PsnapbrainApiUrl=$SNAPBRAIN_API_URL}
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          RELEASE_TASK=compileReleaseKotlin
+          if [ -n "$RELEASE_KEYSTORE_PATH" ]; then RELEASE_TASK=assembleRelease; fi
+          ./gradlew --no-daemon :core:test assembleDebug $RELEASE_TASK ${SNAPBRAIN_API_URL:+-PsnapbrainApiUrl=$SNAPBRAIN_API_URL}
+      - name: release certificate SHA-256 (public; for the Android Developer Console)
+        if: env.RELEASE_KEYSTORE_PATH != ''
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+        run: keytool -list -v -keystore "$RELEASE_KEYSTORE_PATH" -storepass "$RELEASE_STORE_PASSWORD" -alias "$RELEASE_KEY_ALIAS" | grep -E "SHA256:"
       - uses: actions/upload-artifact@v4
         with:
           name: snapbrain-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
+      - uses: actions/upload-artifact@v4
+        if: env.RELEASE_KEYSTORE_PATH != ''
+        with:
+          name: snapbrain-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
