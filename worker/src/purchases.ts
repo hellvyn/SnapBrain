@@ -67,6 +67,12 @@ export async function handleVerifyPurchase(
   ]);
 
   // Play refunds purchases left unacknowledged for 3 days; the app re-verifies on launch, so a failure here retries.
-  if (until !== null && !sub.acknowledged) await deps.play.acknowledge(sub.productId, token);
+  if (until !== null && !sub.acknowledged) {
+    try {
+      await deps.play.acknowledge(sub.productId, token);
+    } catch {
+      throw new ApiError("unavailable", "play acknowledge"); // grant is already stored
+    }
+  }
   return { premium_until: until };
 }

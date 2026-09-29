@@ -1,7 +1,7 @@
 import { env } from "cloudflare:test";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { deviceKey } from "../src/device";
-import { derToP1363, handleReward, verifySsv } from "../src/reward";
+import { derToP1363, fetchAdmobKeys, handleReward, verifySsv } from "../src/reward";
 import { newDeviceId, NOW, SALT } from "./helpers";
 
 const LIMITS = { limitFree: 15, limitPremium: 300, rewardAmount: 3, rewardMaxPerDay: 3 };
@@ -78,6 +78,13 @@ describe("handleReward", () => {
     expect(await bonusOf(dev)).toBe(9);
   });
 
+  it("ignores custom_data appended after the signature", async () => {
+    const victim = newDeviceId();
+    const q = await signed("ad_unit=1&reward_amount=3&transaction_id=" + crypto.randomUUID());
+    await expect(reward(`${q}&custom_data=${victim}`)).rejects.toMatchObject({ code: "invalid-argument" });
+    expect(await bonusOf(victim)).toBeUndefined();
+  });
+
   it("rejects a callback from another ad unit and an empty configured unit", async () => {
     const dev = newDeviceId();
     await expect(reward(await query(dev, crypto.randomUUID(), "999"))).rejects.toMatchObject({ code: "invalid-argument" });
@@ -85,5 +92,21 @@ describe("handleReward", () => {
       handleReward(await query(dev, crypto.randomUUID()), { db: env.DB, salt: SALT, limits: LIMITS, getKeys: keys, now: NOW, adUnitId: "" }),
     ).rejects.toMatchObject({ code: "invalid-argument" });
     expect(await bonusOf(dev)).toBeUndefined();
+  });
+});
+
+describe("fetchAdmobKeys", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("refetches on an unknown key only when the cache is over 5 minutes old", async () => {
+    const respond = (ids: number[]) => async () => Response.json({ keys: ids.map((keyId) => ({ keyId, pem })) });
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(respond([1]));
+    const t0 = Date.now();
+    await fetchAdmobKeys();
+    fetchSpy.mockImplementation(respond([1, 2]));
+    expect((await fetchAdmobKeys(true)).has("2")).toBe(false); // cache is fresh
+    vi.spyOn(Date, "now").mockReturnValue(t0 + 6 * 60 * 1000);
+    expect((await fetchAdmobKeys(true)).has("2")).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 });

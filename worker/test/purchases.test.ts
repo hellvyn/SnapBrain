@@ -31,6 +31,14 @@ describe("handleVerifyPurchase", () => {
     expect(play.acknowledge).toHaveBeenCalledWith("premium_monthly", token);
   });
 
+  it("keeps the grant but answers unavailable when the Play acknowledge fails", async () => {
+    const dev = newDeviceId();
+    const play = fakePlay();
+    play.acknowledge.mockRejectedValue(new Error("boom"));
+    await expect(verifyP(dev, crypto.randomUUID(), play)).rejects.toMatchObject({ code: "unavailable" });
+    expect(await premiumOf(dev)).toBe(NOW + 30 * DAY);
+  });
+
   it("moves premium to the latest device", async () => {
     const a = newDeviceId();
     const b = newDeviceId();

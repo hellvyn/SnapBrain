@@ -3,7 +3,7 @@ import { deviceKey, sha256 } from "./device";
 import { ApiError } from "./errors";
 import type { QuotaLimits } from "./quota";
 
-export type KeyFetcher = () => Promise<Map<string, string>>;
+export type KeyFetcher = (refresh?: boolean) => Promise<Map<string, string>>;
 export type RewardResult = "granted" | "duplicate" | "limit";
 
 export interface RewardDeps {
@@ -50,9 +50,12 @@ export function derToP1363(der: Uint8Array): Uint8Array {
 /** AdMob SSV: the signed message is the raw query string before `&signature=`; signature and key_id come last. */
 export async function verifySsv(rawQuery: string, getKeys: KeyFetcher): Promise<URLSearchParams> {
   const cut = rawQuery.indexOf("&signature=");
-  const params = new URLSearchParams(rawQuery);
-  const sig = params.get("signature");
-  const pem = (await getKeys()).get(params.get("key_id") ?? "");
+  const tail = new URLSearchParams(rawQuery);
+  const sig = tail.get("signature");
+  const keyId = tail.get("key_id") ?? "";
+  let keys = await getKeys();
+  if (!keys.has(keyId)) keys = await getKeys(true); // unknown key: maybe rotated
+  const pem = keys.get(keyId);
   let valid = false;
   try {
     if (cut > 0 && sig && pem) {
@@ -68,15 +71,17 @@ export async function verifySsv(rawQuery: string, getKeys: KeyFetcher): Promise<
     valid = false; // malformed DER or key
   }
   if (!valid) throw new ApiError("invalid-argument", "signature");
-  return params;
+  // Only the signed part is trusted; anything appended after the signature is ignored.
+  return new URLSearchParams(rawQuery.slice(0, cut));
 }
 
 const KEYS_URL = "https://www.gstatic.com/admob/reward/verifier-keys.json";
 let keyCache: { at: number; keys: Map<string, string> } | null = null;
 
-// ponytail: 24h cache, so a rotated key fails until expiry (AdMob retries callbacks).
-export const fetchAdmobKeys: KeyFetcher = async () => {
-  if (keyCache && Date.now() - keyCache.at < 24 * 60 * 60 * 1000) return keyCache.keys;
+// 24h cache; an unknown key_id refetches once the cache is over 5 minutes old (rotation).
+export const fetchAdmobKeys: KeyFetcher = async (refresh) => {
+  const age = keyCache ? Date.now() - keyCache.at : Infinity;
+  if (keyCache && age < 24 * 60 * 60 * 1000 && !(refresh && age >= 5 * 60 * 1000)) return keyCache.keys;
   const res = await fetch(KEYS_URL, { signal: AbortSignal.timeout(5_000) });
   if (!res.ok) throw new Error(`admob keys ${res.status}`);
   const body = (await res.json()) as { keys: { keyId: number; pem: string }[] };

@@ -119,7 +119,7 @@ CREATE TABLE purchases (
 | `LLM_API_KEY`, `DEVICE_SALT` | secret | diisi user di dashboard Cloudflare |
 | `PLAY_SERVICE_ACCOUNT_JSON` | secret | diisi di Rencana 3. Selama kosong, `/verify-purchase` menjawab `UNAVAILABLE` |
 
-Var bisa diubah di dashboard Cloudflare tanpa rilis app.
+Var tinggal di `worker/wrangler.jsonc` dan berubah lewat commit (deploy CI menimpa nilai di dashboard). Hanya secret yang diisi di dashboard Cloudflare.
 
 ### 3.5 LLM
 

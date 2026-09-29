@@ -12,8 +12,15 @@ Semua langkah gratis dan tidak butuh kartu.
 6. **Secret Worker:** Dashboard → Workers & Pages → `snapbrain-api` → Settings → Variables and Secrets → Add → type **Secret**:
    - `LLM_API_KEY` = key dari dashboard freellm.
    - `DEVICE_SALT` = teks acak panjang (misalnya 40 karakter campuran). **Jangan pernah diganti** setelah rilis, karena semua kuota akan ter-reset.
-7. **URL Worker:** tertulis di halaman Worker, bentuknya `https://snapbrain-api.<subdomain>.workers.dev`. Simpan di GitHub **Variables** sebagai `SNAPBRAIN_API_URL`. Aplikasi Android memakainya setelah update app (task berikutnya) masuk; build APK di CI membaca variabel ini.
+7. **URL Worker:** tertulis di halaman Worker, bentuknya `https://snapbrain-api.<subdomain>.workers.dev`. Simpan di GitHub **Variables** sebagai `SNAPBRAIN_API_URL`. URL ini dibaca saat APK dibangun, jadi setelah variabel diisi, jalankan ulang workflow `android`: tab Actions → `android` → **Run workflow** (atau push baru apa pun), lalu unduh APK baru dari artifact `snapbrain-debug-apk`. APK yang dibangun sebelum variabel ini diisi menuju `snapbrain-api.invalid`, sehingga semua item gagal.
 8. **Firebase Console (plan Spark, gratis):** Authentication → Sign-in method → **Anonymous** → Enable. App Check → daftarkan app Android dengan Play Integrity. Untuk APK debug, pakai **Manage debug tokens**.
 9. **Opsional:**
    - `LLM_MODEL` (default `auto`), limit kuota, dan `ADMOB_AD_UNIT_ID` adalah `vars` di `worker/wrangler.jsonc`. Setiap deploy CI menimpanya, jadi jangan diubah lewat dashboard. Ubah di `worker/wrangler.jsonc` lalu merge ke `main` (atau minta Claude yang mengubahnya).
    - Hanya secret yang diisi lewat dashboard: `LLM_API_KEY`, `DEVICE_SALT`, dan `PLAY_SERVICE_ACCOUNT_JSON` (baru dibutuhkan di Rencana 3).
+
+## Smoke test setelah deploy pertama
+
+- Kirim `item_id` yang sama dua kali ke `/extract`: kuota hanya berkurang sekali.
+- Kirim `transaction_id` reward yang sama dua kali: reward hanya dikreditkan sekali.
+- Reward ke-4 di hari yang sama ditolak.
+- Setelah iklan ada (AdMob baru terpasang di app pada Rencana 3): tonton satu rewarded ad sungguhan, lalu pastikan log Worker memuat `{"route":"ad-reward","result":"granted"}`.

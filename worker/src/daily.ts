@@ -13,9 +13,9 @@ export async function runDaily(deps: { db: D1Database; play: PlayApi | null; now
   let rechecked = 0;
   let failed = 0;
   if (play) {
-    // ponytail: LIMIT 20 keeps us inside free-plan subrequest/D1 limits; raise on a paid plan or batch across runs.
+    // ponytail: LIMIT 20 keeps us inside free-plan subrequest/D1 limits; random order so every subscription is rechecked eventually. Raise on a paid plan.
     const { results } = await db
-      .prepare("SELECT token, token_hash, device_key FROM purchases WHERE premium_until IS NOT NULL AND premium_until >= ? ORDER BY premium_until ASC LIMIT 20")
+      .prepare("SELECT token, token_hash, device_key FROM purchases WHERE premium_until IS NOT NULL AND premium_until >= ? ORDER BY RANDOM() LIMIT 20")
       .bind(now - RECHECK_WINDOW_MS)
       .all<{ token: string; token_hash: string; device_key: string }>();
     for (const p of results) {
