@@ -23,12 +23,17 @@ export interface PurchaseDeps {
 
 // CANCELED keeps access until expiry. PENDING, ON_HOLD, PAUSED and EXPIRED (incl. refunds) get none.
 const ENTITLED = new Set(["SUBSCRIPTION_STATE_ACTIVE", "SUBSCRIPTION_STATE_IN_GRACE_PERIOD", "SUBSCRIPTION_STATE_CANCELED"]);
-export const premiumUntilOf = (s: SubscriptionInfo): number | null => (ENTITLED.has(s.state) ? s.expiryMs : null);
+export function premiumUntilOf(s: SubscriptionInfo): number | null {
+  if (!ENTITLED.has(s.state)) return null;
+  // A malformed response must not revoke: callers treat the throw as a Play failure and keep the entitlement.
+  if (s.expiryMs === null) throw new Error("entitled subscription without expiry");
+  return s.expiryMs;
+}
 
-/** Grant sets premium + owner token; a non-entitled result only clears premium this token granted. */
+/** Grant sets premium + owner token unless another token holds a longer grant; a non-entitled result only clears premium this token granted. */
 export function entitlementStatements(db: D1Database, key: string, tokenHash: string, until: number | null): D1PreparedStatement[] {
   return until !== null
-    ? [db.prepare("UPDATE quota SET premium_until = ?2, premium_token = ?3 WHERE device_key = ?1").bind(key, until, tokenHash)]
+    ? [db.prepare("UPDATE quota SET premium_until = ?2, premium_token = ?3 WHERE device_key = ?1 AND (premium_token = ?3 OR premium_token IS NULL OR premium_until IS NULL OR premium_until < ?2)").bind(key, until, tokenHash)]
     : [db.prepare("UPDATE quota SET premium_until = NULL, premium_token = NULL WHERE device_key = ?1 AND premium_token = ?2").bind(key, tokenHash)];
 }
 
@@ -41,12 +46,13 @@ export async function handleVerifyPurchase(
   const key = deviceKey(input.device_id, deps.salt);
   if (!deps.play) throw new ApiError("unavailable", "play not configured");
   let sub: SubscriptionInfo;
+  let until: number | null;
   try {
     sub = await deps.play.getSubscription(token);
+    until = premiumUntilOf(sub);
   } catch {
     throw new ApiError("unavailable", "play");
   }
-  const until = premiumUntilOf(sub);
   const { db, now } = deps;
   const tokenHash = sha256(token);
 

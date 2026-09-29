@@ -20,3 +20,10 @@ it("gets a token with a signed JWT and reads subscriptionsv2", async () => {
   );
   expect((f.mock.calls[1][1]?.headers as Record<string, string>).authorization).toBe("Bearer at");
 });
+
+it("defers a bad service-account secret to the first call", async () => {
+  const f = vi.fn<typeof fetch>();
+  const api = googlePlayApi("not json", "com.snapbrain.app", f);
+  await expect(api.getSubscription("tok")).rejects.toThrow();
+  expect(f).not.toHaveBeenCalled();
+});

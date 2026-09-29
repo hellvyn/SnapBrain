@@ -1,7 +1,7 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it, vi } from "vitest";
 import { runDaily } from "../src/daily";
-import { deviceKey } from "../src/device";
+import { deviceKey, sha256 } from "../src/device";
 import { handleVerifyPurchase, type PlayApi, type SubscriptionInfo } from "../src/purchases";
 import { DAY, newDeviceId, NOW, SALT } from "./helpers";
 
@@ -50,6 +50,24 @@ describe("handleVerifyPurchase", () => {
     expect(await premiumOf(dev)).toBe(NOW + 60 * DAY);
   });
 
+  it("does not downgrade a longer grant held by another token", async () => {
+    const dev = newDeviceId();
+    const t1 = crypto.randomUUID();
+    const t2 = crypto.randomUUID();
+    await verifyP(dev, t2, fakePlay({ expiryMs: NOW + 60 * DAY }));
+    await verifyP(dev, t1, fakePlay({ state: "SUBSCRIPTION_STATE_CANCELED", expiryMs: NOW + 30 * DAY }));
+    const row = await env.DB.prepare("SELECT premium_until, premium_token FROM quota WHERE device_key = ?").bind(deviceKey(dev, SALT)).first();
+    expect(row).toEqual({ premium_until: NOW + 60 * DAY, premium_token: sha256(t2) });
+  });
+
+  it("treats an entitled response without expiry as a Play failure and keeps premium", async () => {
+    const dev = newDeviceId();
+    const token = crypto.randomUUID();
+    await verifyP(dev, token);
+    await expect(verifyP(dev, token, fakePlay({ expiryMs: null }))).rejects.toMatchObject({ code: "unavailable" });
+    expect(await premiumOf(dev)).toBe(NOW + 30 * DAY);
+  });
+
   it.each([
     ["SUBSCRIPTION_STATE_CANCELED", true],
     ["SUBSCRIPTION_STATE_IN_GRACE_PERIOD", true],
@@ -76,5 +94,28 @@ describe("runDaily", () => {
     await runDaily({ db: env.DB, play: fakePlay({ state: "SUBSCRIPTION_STATE_EXPIRED" }), now: NOW });
     expect(await premiumOf(dev)).toBeNull();
     expect(await env.DB.prepare("SELECT 1 FROM rewards WHERE tx_hash = 'old'").first()).toBeNull();
+  });
+
+  it("counts a failing token, still rechecks the others and still cleans up", async () => {
+    const bad = crypto.randomUUID();
+    const good = crypto.randomUUID();
+    const devBad = newDeviceId();
+    const devGood = newDeviceId();
+    await verifyP(devBad, bad);
+    await verifyP(devGood, good);
+    await env.DB.prepare("INSERT INTO rewards (tx_hash, granted, expire_at) VALUES ('old2', 1, ?)").bind(NOW - 1).run();
+    const play = fakePlay({ state: "SUBSCRIPTION_STATE_EXPIRED" });
+    play.getSubscription.mockImplementation(async (t: string) => {
+      if (t === bad) throw new Error("boom");
+      return { state: "SUBSCRIPTION_STATE_EXPIRED", expiryMs: NOW - DAY, acknowledged: true, productId: "premium_monthly" };
+    });
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await runDaily({ db: env.DB, play, now: NOW });
+    expect(res.failed).toBeGreaterThanOrEqual(1);
+    expect(errors).toHaveBeenCalledWith(JSON.stringify({ cron: "recheck", error: "Error" }));
+    errors.mockRestore();
+    expect(await premiumOf(devBad)).toBe(NOW + 30 * DAY);
+    expect(await premiumOf(devGood)).toBeNull();
+    expect(await env.DB.prepare("SELECT 1 FROM rewards WHERE tx_hash = 'old2'").first()).toBeNull();
   });
 });

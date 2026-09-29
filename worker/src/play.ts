@@ -1,4 +1,5 @@
 import { importPKCS8, SignJWT } from "jose";
+import { z } from "zod";
 import type { PlayApi } from "./purchases";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -6,11 +7,13 @@ const SCOPE = "https://www.googleapis.com/auth/androidpublisher";
 
 /** Thin REST wiring to the Android Publisher API with a service-account JWT; decisions live in purchases.ts. */
 export function googlePlayApi(serviceAccountJson: string, packageName: string, fetchFn: typeof fetch = fetch): PlayApi {
-  const sa = JSON.parse(serviceAccountJson) as { client_email: string; private_key: string };
+  const saSchema = z.object({ client_email: z.string().min(1), private_key: z.string().min(1) });
   let cached: { token: string; exp: number } | null = null;
 
   async function accessToken(): Promise<string> {
     if (cached && cached.exp > Date.now() + 60_000) return cached.token;
+    // Parsed lazily so a bad secret fails inside Play calls (callers map that to unavailable / cron failed), not at construction.
+    const sa = saSchema.parse(JSON.parse(serviceAccountJson));
     const assertion = await new SignJWT({ scope: SCOPE })
       .setProtectedHeader({ alg: "RS256" })
       .setIssuer(sa.client_email)
