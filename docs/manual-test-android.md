@@ -2,7 +2,7 @@
 
 Artifact CI hanya terhubung ke backend asli jika repo secret `GOOGLE_SERVICES_JSON` (isi google-services.json asli) sudah diisi di GitHub → Settings → Secrets and variables → Actions. Tanpa secret itu APK dibangun dengan konfigurasi dummy dan setiap panggilan AI gagal.
 
-Prasyarat: backend Cloudflare sudah di-deploy dan secret Worker diisi (docs/cloudflare-ops.md langkah 1–8). Token debug App Check sudah didaftarkan: jalankan app sekali, cari "DebugAppCheckProvider" di logcat, lalu tempel token-nya di Firebase Console → App Check → Manage debug tokens. Tanpa backend, item tampil "Menunggu internet" dan berubah menjadi "Gagal, coba lagi" setelah 5 percobaan.
+Prasyarat: backend Cloudflare sudah di-deploy dan secret Worker diisi (docs/cloudflare-ops.md langkah 1–8). Token debug App Check sudah didaftarkan: buka app sekali (force stop dulu bila sudah terbuka) dengan HP tersambung ke Android Studio, filter Logcat dengan `App Check debug token`, lalu tempel kode setelah "debug token:" di Firebase Console → App Check → Manage debug tokens. Tanpa backend, item tampil "Menunggu internet" dan berubah menjadi "Gagal, coba lagi" setelah 5 percobaan.
 
 1. Buka SnapBrain. Inbox kosong menampilkan "Belum ada screenshot...".
 2. Galeri → pilih screenshot struk transfer → Share → SnapBrain. Sheet muncul, lalu tampil "Mengekstrak teks..." dan "AI sedang menganalisis konteks...". Hasil tampil dengan kategori 💰 Keuangan dan tombol Salin/aksi.
