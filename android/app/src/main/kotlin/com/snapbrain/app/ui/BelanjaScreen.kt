@@ -125,34 +125,31 @@ fun BelanjaScreen(repository: ItemRepository, onOpen: (String) -> Unit) {
                     }
                 }
             }
-            item { SummaryCard(total, budget, spent, onSetBudget = { editBudget = true }) }
-            item {
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = byIngredient, onClick = { byIngredient = true }, label = { Text("Per bahan", fontWeight = FontWeight.Bold) }, shape = RoundedCornerShape(50))
-                    FilterChip(selected = !byIngredient, onClick = { byIngredient = false }, label = { Text("Per asal", fontWeight = FontWeight.Bold) }, shape = RoundedCornerShape(50))
-                    FilterChip(selected = hideChecked, onClick = { hideChecked = !hideChecked }, label = { Text("Sembunyikan yang dicentang", fontWeight = FontWeight.Bold) }, shape = RoundedCornerShape(50))
-                }
-            }
             if (all.isEmpty()) {
+                item { EmptyText("Belanja masih kosong. Buka screenshot resep atau produk, lalu tekan \"Masak sekarang\" atau \"Mau beli\".") }
+            } else {
+                item { SummaryCard(total, budget, spent, onSetBudget = { editBudget = true }) }
                 item {
-                    Text(
-                        "Belanja masih kosong. Buka screenshot resep atau produk, lalu tekan \"Masak sekarang\" atau \"Mau beli\".",
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth().padding(top = 48.dp, start = 12.dp, end = 12.dp),
-                    )
-                }
-            } else if (byIngredient) {
-                item {
-                    SnapCard(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
-                            groupByIngredient(visible) { it.row.text }.forEach { group -> IngredientRow(group, onToggle = { toggle(group.rows) }) }
-                        }
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = byIngredient, onClick = { byIngredient = true }, label = { Text("Per bahan", fontWeight = FontWeight.Bold) }, shape = RoundedCornerShape(50))
+                        FilterChip(selected = !byIngredient, onClick = { byIngredient = false }, label = { Text("Per asal", fontWeight = FontWeight.Bold) }, shape = RoundedCornerShape(50))
+                        FilterChip(selected = hideChecked, onClick = { hideChecked = !hideChecked }, label = { Text("Sembunyikan yang dicentang", fontWeight = FontWeight.Bold) }, shape = RoundedCornerShape(50))
                     }
                 }
-            } else {
-                items(visible.groupBy { it.row.itemId }.toList()) { (itemId, source) ->
-                    SourceCard(source.first().itemTitle ?: "Screenshot", source, onOpen = { onOpen(itemId) }, onToggle = { toggle(listOf(it)) })
+                if (visible.isEmpty()) {
+                    item { EmptyText("Semua sudah dicentang.") }
+                } else if (byIngredient) {
+                    item {
+                        SnapCard(Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                                groupByIngredient(visible) { it.row.text }.forEach { group -> IngredientRow(group, onToggle = { toggle(group.rows) }) }
+                            }
+                        }
+                    }
+                } else {
+                    items(visible.groupBy { it.row.itemId }.toList()) { (itemId, source) ->
+                        SourceCard(source.first().itemTitle ?: "Screenshot", source, onOpen = { onOpen(itemId) }, onToggle = { toggle(listOf(it)) })
+                    }
                 }
             }
             if (all.any { it.row.checked }) {
@@ -167,6 +164,16 @@ fun BelanjaScreen(repository: ItemRepository, onOpen: (String) -> Unit) {
             }
         }
     }
+}
+
+@Composable
+private fun EmptyText(text: String) {
+    Text(
+        text,
+        textAlign = TextAlign.Center,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.fillMaxWidth().padding(top = 48.dp, start = 12.dp, end = 12.dp),
+    )
 }
 
 /** One list per screenshot, with ☐/☑, for WhatsApp and friends. */
@@ -191,9 +198,14 @@ private fun SummaryCard(total: BelanjaTotal, budget: Long, spent: Long, onSetBud
                 SummaryLine("Budget bulan ini", rupiah(budget))
                 SummaryLine("Terbeli", rupiah(b.spent))
                 SummaryLine("Sisa", rupiah(b.left))
-                if (b.over) {
+                val warning = when {
+                    b.left < 0 -> "Budget bulan ini terlampaui ${rupiah(-b.left)}"
+                    b.over -> "Incaran lebih ${rupiah(b.planned - b.left)} dari sisa budget"
+                    else -> null
+                }
+                if (warning != null) {
                     Text(
-                        "Incaran lebih ${rupiah(b.planned - b.left)} dari sisa budget",
+                        warning,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.error,
@@ -302,7 +314,7 @@ private fun BudgetDialog(current: Long, onSave: (Long) -> Unit, onDismiss: () ->
 @Composable
 private fun CompareDialog(repository: ItemRepository, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
-    val items: List<ItemEntity>? by remember { repository.observe("", "shopping") }.collectAsState(initial = null)
+    val shoppingItems: List<ItemEntity>? by remember { repository.observe("", "shopping") }.collectAsState(initial = null)
     var selected by remember { mutableStateOf(listOf<String>()) }
     var table by remember { mutableStateOf<Pair<List<String>, List<Pair<String, List<String>>>>?>(null) }
     val back: () -> Unit = { if (table != null) { table = null } else { onClose() } }
@@ -315,7 +327,7 @@ private fun CompareDialog(repository: ItemRepository, onClose: () -> Unit) {
                 }
                 val shown = table
                 if (shown == null) {
-                    val choices = items.orEmpty().filter { it.status == ItemStatus.DONE.name }
+                    val choices = shoppingItems.orEmpty().filter { it.status == ItemStatus.DONE.name }
                     Text(
                         if (choices.size < 2) "Butuh minimal 2 screenshot belanja (halaman produk atau keranjang)." else "Pilih 2–3 screenshot belanja.",
                         style = MaterialTheme.typography.bodyMedium,

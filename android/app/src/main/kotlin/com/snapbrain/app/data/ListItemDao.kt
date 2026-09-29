@@ -16,7 +16,10 @@ interface ListItemDao {
     @Query("SELECT * FROM list_item WHERE itemId = :itemId ORDER BY listIndex, position")
     fun observe(itemId: String): Flow<List<ListItemEntity>>
 
-    /** Per-item progress and the earliest open due, for the Inbox cards. */
+    /**
+     * Per-item progress and the earliest open due, for the Inbox cards. ISO strings sort chronologically, so
+     * MIN(due) is the earliest ("2026-10-01" sorts before "2026-10-01T09:00").
+     */
     @Query(
         """SELECT itemId, COUNT(*) AS total, SUM(checked) AS done,
                   MIN(CASE WHEN checked = 0 AND due IS NOT NULL AND due != '' THEN due END) AS nextDue
@@ -32,7 +35,7 @@ interface ListItemDao {
     )
     fun observeBelanja(): Flow<List<SourcedRow>>
 
-    /** Spec §8 To-do: to-do/bring/step rows of activated screenshots, plus any such row with a due. */
+    /** Spec §8 To-do: to-do/bring/step rows of activated screenshots, plus any such row with a due. Same rule as core todoEligible(). */
     @Query(
         """SELECT list_item.*, item.title AS itemTitle FROM list_item JOIN item ON item.id = list_item.itemId
            WHERE (list_item.role IN ('todo', 'bawa') OR list_item.kind = 'steps')
@@ -66,6 +69,7 @@ interface ListItemDao {
     @Query("DELETE FROM list_item WHERE itemId = :itemId")
     suspend fun deleteFor(itemId: String)
 
+    /** SQLite evaluates every SET expression against the old row, so `CASE WHEN checked = 0` sees the pre-toggle value. */
     @Query("UPDATE list_item SET checked = NOT checked, checkedAt = CASE WHEN checked = 0 THEN :now ELSE NULL END WHERE id = :id")
     suspend fun toggle(id: Long, now: Long)
 
@@ -79,7 +83,8 @@ interface ListItemDao {
     @Query("UPDATE list_item SET remind = NOT remind WHERE id = :id")
     suspend fun toggleRemind(id: Long)
 
-    @Query("UPDATE list_item SET inBelanja = 1 WHERE itemId = :itemId AND role = 'belanja'")
+    /** Rows already bought stay out, so re-activating after "Selesai belanja" does not bring them back. */
+    @Query("UPDATE list_item SET inBelanja = 1 WHERE itemId = :itemId AND role = 'belanja' AND checked = 0")
     suspend fun addToBelanja(itemId: String)
 
     /** Deactivating keeps checked rows in Belanja until "Selesai belanja" (spec §8). */

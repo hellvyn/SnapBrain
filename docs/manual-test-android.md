@@ -57,6 +57,7 @@ Siapkan: screenshot chat grup dengan tenggat "besok" dan satu dengan jam ("hari 
 4. **Batal:** centang item bertenggat, matikan 🔔 item, atau hapus screenshot-nya sebelum waktunya → notifikasi tidak muncul.
 5. **Sakelar global:** Inbox ⋮ → "Matikan semua pengingat" → tidak ada notifikasi; 🔔 di Detail tampil mati dan tap menampilkan petunjuk. "Nyalakan pengingat" menjadwalkan ulang item bertenggat yang belum dicentang.
 6. **Restart HP:** pengingat yang sudah dijadwalkan tetap muncul.
+7. **Pasang di atas build lama:** APK Fase A dengan item bertenggat (belum dicentang) → pasang APK ini di atasnya, buka app sekali → pengingat item itu tetap muncul pada waktunya.
 
 ## Fase C (Belanja, To-do)
 

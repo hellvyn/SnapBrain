@@ -35,7 +35,7 @@ val LocalNotificationsAllowed = staticCompositionLocalOf { true }
 
 /** Per-row 🔔 (spec §7). Off when notifications are blocked, the global switch is off, or the row is muted. */
 @Composable
-fun ReminderBell(remind: Boolean, globalOn: Boolean, onToggle: () -> Unit) {
+fun ReminderBell(remind: Boolean, globalOn: Boolean, label: String, onToggle: () -> Unit) {
     val context = LocalContext.current
     val allowed = LocalNotificationsAllowed.current
     val on = allowed && globalOn && remind
@@ -50,7 +50,7 @@ fun ReminderBell(remind: Boolean, globalOn: Boolean, onToggle: () -> Unit) {
     ) {
         Icon(
             if (on) SnapIcons.Bell else SnapIcons.BellOff,
-            contentDescription = if (on) "Pengingat nyala" else "Pengingat mati",
+            contentDescription = (if (on) "Pengingat nyala: " else "Pengingat mati: ") + label,
             tint = if (on) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }

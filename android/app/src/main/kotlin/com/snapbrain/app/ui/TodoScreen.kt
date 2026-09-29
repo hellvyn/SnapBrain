@@ -119,7 +119,8 @@ private fun GroupHeader(group: TodoGroup<SourcedRow>) {
         null -> categoryStyle("reference").tint
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    // TalkBack reads the title and count as one heading-like item.
+    Row(Modifier.semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically) {
         Text(
             group.title.uppercase(),
             style = MaterialTheme.typography.labelMedium,
@@ -175,6 +176,6 @@ private fun TodoRow(source: SourcedRow, now: LocalDateTime, remindersOn: Boolean
                 modifier = Modifier.padding(start = 8.dp),
             )
         }
-        if (!row.due.isNullOrBlank()) ReminderBell(row.remind, remindersOn, onToggle = onBell)
+        if (!row.due.isNullOrBlank()) ReminderBell(row.remind, remindersOn, row.text, onToggle = onBell)
     }
 }

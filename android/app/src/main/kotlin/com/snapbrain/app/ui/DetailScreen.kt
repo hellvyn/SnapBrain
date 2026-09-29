@@ -123,9 +123,11 @@ fun DetailScreen(id: String, repository: ItemRepository, onBack: () -> Unit) {
     val actions = current.actionList()
     val now = LocalDateTime.now()
     // Spec §6.3/S7: the button only shows when its rows have somewhere to land.
-    val toBelanja = activatesBelanja(current.activation) && rows.any { it.role == "belanja" }
+    val hasBelanja = activatesBelanja(current.activation) && rows.any { it.role == "belanja" }
     val toTodo = rows.any { todoEligible(it.role, it.kind) }
-    val activation = if (IS_PRO) activationLabel(current.activation, current.active, toBelanja, toTodo) else null
+    // Active only while some row is still in Belanja or the item has To-do rows; after "Selesai belanja" it reads inactive.
+    val shownActive = current.active && (rows.any { it.inBelanja } || toTodo)
+    val activation = if (IS_PRO) activationLabel(current.activation, shownActive, hasBelanja, toTodo) else null
 
     Scaffold(
         topBar = {
@@ -163,8 +165,8 @@ fun DetailScreen(id: String, repository: ItemRepository, onBack: () -> Unit) {
         ) {
             item {
                 HeroCard(
-                    current, style, title, activation,
-                    onActivate = { scope.launch { repository.setActive(id, !current.active) } },
+                    current, style, title, activation, shownActive,
+                    onActivate = { scope.launch { repository.setActive(id, !shownActive) } },
                     onRetry = { scope.launch { repository.retry(id); ProcessWorker.enqueue(context.applicationContext) } },
                 )
             }
@@ -199,7 +201,15 @@ fun DetailScreen(id: String, repository: ItemRepository, onBack: () -> Unit) {
 private fun List<ListItemEntity>.toShareList() = ShareList(first().listTitle, first().kind == "steps", map { it.text to it.checked })
 
 @Composable
-private fun HeroCard(item: ItemEntity, style: CategoryStyle, title: String, activation: String?, onActivate: () -> Unit, onRetry: () -> Unit) {
+private fun HeroCard(
+    item: ItemEntity,
+    style: CategoryStyle,
+    title: String,
+    activation: String?,
+    active: Boolean,
+    onActivate: () -> Unit,
+    onRetry: () -> Unit,
+) {
     SnapCard(Modifier.fillMaxWidth(), color = style.tile) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -217,7 +227,7 @@ private fun HeroCard(item: ItemEntity, style: CategoryStyle, title: String, acti
             if (activation != null) {
                 val shape = RoundedCornerShape(16.dp)
                 val modifier = Modifier.fillMaxWidth().height(52.dp)
-                if (item.active) {
+                if (active) {
                     OutlinedButton(
                         onClick = onActivate,
                         modifier = modifier,
@@ -349,7 +359,7 @@ private fun ListRow(row: ListItemEntity, number: Int?, now: LocalDateTime, remin
         if (row.minutes > 0) {
             Chip("${row.minutes} mnt", MaterialTheme.colorScheme.secondary, SnapIcons.Timer) { context.startTimer(row.minutes, row.text) }
         }
-        if (!row.due.isNullOrBlank()) ReminderBell(row.remind, remindersOn, onToggle = onBell)
+        if (!row.due.isNullOrBlank()) ReminderBell(row.remind, remindersOn, row.text, onToggle = onBell)
     }
 }
 
