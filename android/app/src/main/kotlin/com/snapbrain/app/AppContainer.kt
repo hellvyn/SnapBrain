@@ -16,6 +16,6 @@ class AppContainer(context: Context) {
         dao = AppDatabase.create(context).itemDao(),
         images = ImageStore(context),
         ocr = OcrEngine(context),
-        client = ExtractClient(deviceIdOf(androidId)),
+        client = ExtractClient(deviceIdOf(androidId), BuildConfig.API_BASE_URL),
     )
 }

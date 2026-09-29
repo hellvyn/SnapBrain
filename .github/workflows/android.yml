@@ -10,6 +10,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      SNAPBRAIN_API_URL: ${{ vars.SNAPBRAIN_API_URL }}
     defaults:
       run:
         working-directory: android
@@ -40,7 +42,8 @@ jobs:
           }
           JSON
           fi
-      - run: ./gradlew --no-daemon :core:test assembleDebug compileReleaseKotlin
+      - name: build
+        run: ./gradlew --no-daemon :core:test assembleDebug compileReleaseKotlin ${SNAPBRAIN_API_URL:+-PsnapbrainApiUrl=$SNAPBRAIN_API_URL}
       - uses: actions/upload-artifact@v4
         with:
           name: snapbrain-debug-apk

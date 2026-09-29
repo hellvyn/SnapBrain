@@ -2,37 +2,66 @@ package com.snapbrain.app.process
 
 import android.util.Log
 import com.google.firebase.Firebase
+import com.google.firebase.appcheck.appCheck
 import com.google.firebase.auth.auth
-import com.google.firebase.functions.FirebaseFunctionsException
-import com.google.firebase.functions.functions
 import com.snapbrain.core.ExtractJson
 import com.snapbrain.core.ExtractOutcome
 import com.snapbrain.core.outcomeOfCode
 import com.snapbrain.core.truncateForApi
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
-class ExtractClient(private val deviceId: String) {
-    private val functions = Firebase.functions("asia-southeast2")
-
+class ExtractClient(private val deviceId: String, private val baseUrl: String) {
     suspend fun extract(itemId: String, ocrText: String): ExtractOutcome = try {
-        if (Firebase.auth.currentUser == null) Firebase.auth.signInAnonymously().await()
-        val payload = mapOf("ocr_text" to truncateForApi(ocrText), "device_id" to deviceId, "item_id" to itemId)
-        val result = functions.getHttpsCallable("extract").call(payload).await()
-        val json = JSONObject(result.data as Map<*, *>).toString()
-        ExtractOutcome.Success(ExtractJson.parse(json))
+        val auth = Firebase.auth
+        if (auth.currentUser == null) auth.signInAnonymously().await()
+        val idToken = auth.currentUser?.getIdToken(false)?.await()?.token
+        val appCheck = Firebase.appCheck.getAppCheckToken(false).await().token
+        if (idToken == null) {
+            ExtractOutcome.Retryable
+        } else {
+            val body = JSONObject(
+                mapOf("ocr_text" to truncateForApi(ocrText), "device_id" to deviceId, "item_id" to itemId),
+            ).toString()
+            val (code, text) = withContext(Dispatchers.IO) { post("$baseUrl/extract", body, idToken, appCheck) }
+            if (code in 200..299) {
+                ExtractOutcome.Success(ExtractJson.parse(text))
+            } else {
+                val error = runCatching { JSONObject(text).getString("error") }.getOrDefault("INTERNAL")
+                Log.w("Extract", error)
+                if (error == "UNAUTHENTICATED") auth.signOut()
+                outcomeOfCode(error)
+            }
+        }
     } catch (e: CancellationException) {
         throw e
-    } catch (e: FirebaseFunctionsException) {
-        // Code name only: messages may embed response JSON derived from OCR.
-        Log.w("Extract", e.code.name)
-        // Stale anonymous session: sign out so the next attempt re-signs in.
-        if (e.code == FirebaseFunctionsException.Code.UNAUTHENTICATED) Firebase.auth.signOut()
-        outcomeOfCode(e.code.name)
     } catch (e: Exception) {
-        // Network, auth or unexpected payload: worth retrying with backoff; never log OCR text or messages.
+        // Network, auth or unexpected payload: retry with backoff; never log the message (may echo OCR text).
         Log.w("Extract", e.javaClass.simpleName)
         ExtractOutcome.Retryable
+    }
+
+    private fun post(url: String, body: String, idToken: String, appCheck: String): Pair<Int, String> {
+        val conn = URL(url).openConnection() as HttpURLConnection
+        try {
+            conn.requestMethod = "POST"
+            conn.connectTimeout = 10_000
+            conn.readTimeout = 60_000
+            conn.doOutput = true
+            conn.setRequestProperty("content-type", "application/json")
+            conn.setRequestProperty("authorization", "Bearer $idToken")
+            conn.setRequestProperty("x-firebase-appcheck", appCheck)
+            conn.outputStream.use { it.write(body.toByteArray()) }
+            val code = conn.responseCode
+            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+            return code to (stream?.bufferedReader()?.use { it.readText() } ?: "")
+        } finally {
+            conn.disconnect()
+        }
     }
 }

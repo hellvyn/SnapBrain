@@ -15,7 +15,7 @@ const val MAX_ATTEMPTS = 5
 const val MIN_OCR_CHARS = 10
 const val MAX_OCR_CHARS = 20_000
 
-/** [code] is FirebaseFunctionsException.Code.name. */
+/** [code] is the Worker error code (same names as Firebase Functions codes). */
 fun outcomeOfCode(code: String): ExtractOutcome = when (code) {
     "RESOURCE_EXHAUSTED" -> ExtractOutcome.QuotaExhausted
     "INVALID_ARGUMENT" -> ExtractOutcome.Invalid
