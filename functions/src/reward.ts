@@ -11,6 +11,7 @@ export type RewardResult = "granted" | "duplicate" | "limit";
 export interface RewardDeps {
   db: Firestore;
   salt: string;
+  adUnitId: string;
   getKeys: KeyFetcher;
   now: number;
 }
@@ -49,6 +50,7 @@ export const fetchAdmobKeys: KeyFetcher = async () => {
 
 export async function handleReward(rawQuery: string, deps: RewardDeps): Promise<RewardResult> {
   const params = await verifySsv(rawQuery, deps.getKeys);
+  if (params.get("ad_unit") !== deps.adUnitId) throw new ApiError("invalid-argument", "ad_unit");
   const txId = params.get("transaction_id");
   if (!txId) throw new ApiError("invalid-argument", "transaction_id");
   const key = deviceKey(params.get("custom_data"), deps.salt);

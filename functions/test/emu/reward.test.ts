@@ -7,11 +7,11 @@ import { db, newDeviceId, NOW, SALT } from "./helpers";
 
 const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
 const getKeys = async () => new Map([["1", publicKey.export({ type: "spki", format: "pem" }).toString()]]);
-const query = (deviceId: string, tx: string) => {
-  const body = `ad_network=1&ad_unit=1&custom_data=${deviceId}&reward_amount=3&reward_item=ai&timestamp=1&transaction_id=${tx}&user_id=u`;
+const query = (deviceId: string, tx: string, adUnit = "1") => {
+  const body = `ad_network=1&ad_unit=${adUnit}&custom_data=${deviceId}&reward_amount=3&reward_item=ai&timestamp=1&transaction_id=${tx}&user_id=u`;
   return `${body}&signature=${sign("sha256", Buffer.from(body), privateKey).toString("base64url")}&key_id=1`;
 };
-const reward = (q: string) => handleReward(q, { db, salt: SALT, getKeys, now: NOW });
+const reward = (q: string) => handleReward(q, { db, salt: SALT, adUnitId: "1", getKeys, now: NOW });
 const bonusOf = async (deviceId: string) => (await db.doc(`quota/${deviceKey(deviceId, SALT)}`).get()).get("bonus");
 
 beforeEach(() => resetConfigCache());
@@ -42,5 +42,11 @@ describe("handleReward", () => {
     await expect(reward(`custom_data=${newDeviceId()}&transaction_id=x`)).rejects.toMatchObject({
       code: "invalid-argument",
     });
+  });
+
+  it("rejects a callback from another ad unit", async () => {
+    const dev = newDeviceId();
+    await expect(reward(query(dev, randomUUID(), "999"))).rejects.toMatchObject({ code: "invalid-argument" });
+    expect((await db.doc(`quota/${deviceKey(dev, SALT)}`).get()).exists).toBe(false);
   });
 });
