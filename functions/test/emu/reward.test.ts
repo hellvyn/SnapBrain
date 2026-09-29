@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { resetConfigCache } from "../../src/config";
 import { deviceKey } from "../../src/device";
 import { handleReward } from "../../src/reward";
-import { db, newDeviceId, NOW, SALT } from "./helpers";
+import { DAY, db, newDeviceId, NOW, SALT } from "./helpers";
 
 const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
 const getKeys = async () => new Map([["1", publicKey.export({ type: "spki", format: "pem" }).toString()]]);
@@ -21,6 +21,15 @@ describe("handleReward", () => {
     const dev = newDeviceId();
     expect(await reward(query(dev, randomUUID()))).toBe("granted");
     expect(await bonusOf(dev)).toBe(3);
+  });
+
+  it("preserves premium ownership fields", async () => {
+    const dev = newDeviceId();
+    await db.doc(`quota/${deviceKey(dev, SALT)}`).set({ premiumUntil: NOW + DAY, premiumToken: "tok" });
+    expect(await reward(query(dev, randomUUID()))).toBe("granted");
+    const doc = await db.doc(`quota/${deviceKey(dev, SALT)}`).get();
+    expect(doc.get("premiumUntil")).toBe(NOW + DAY);
+    expect(doc.get("premiumToken")).toBe("tok");
   });
 
   it("ignores a duplicate transaction", async () => {

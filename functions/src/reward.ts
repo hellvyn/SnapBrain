@@ -41,7 +41,7 @@ let keyCache: { at: number; keys: Map<string, string> } | null = null;
 // ponytail: 24h cache, so a rotated key fails until expiry (AdMob retries callbacks); refetch on unknown key_id if that bites.
 export const fetchAdmobKeys: KeyFetcher = async () => {
   if (keyCache && Date.now() - keyCache.at < 24 * 60 * 60 * 1000) return keyCache.keys;
-  const res = await fetch(KEYS_URL);
+  const res = await fetch(KEYS_URL, { signal: AbortSignal.timeout(5_000) });
   if (!res.ok) throw new Error(`admob keys ${res.status}`);
   const body = (await res.json()) as { keys: { keyId: number; pem: string }[] };
   keyCache = { at: Date.now(), keys: new Map(body.keys.map((k) => [String(k.keyId), k.pem])) };

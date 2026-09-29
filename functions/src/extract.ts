@@ -38,6 +38,7 @@ export async function handleExtract(input: Record<string, unknown>, deps: Extrac
   // One charge per item per tier: a retry of the same item is free,
   // re-processing a locked item after upgrading costs one premium use (spec §8).
   const chargeRef = quotaRef.collection("charges").doc(`${itemId}_${premium ? "p" : "f"}`);
+  // ponytail: a retry of a charged item re-runs the LLM with whatever text is sent; store sha256(text) on the charge doc and treat a mismatch as uncharged if modified clients abuse it.
   if (!(await chargeRef.get()).exists && !hasQuota(before, cfg, now)) {
     throw new ApiError("resource-exhausted", "quota");
   }

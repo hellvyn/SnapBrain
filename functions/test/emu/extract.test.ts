@@ -83,11 +83,24 @@ describe("handleExtract", () => {
   });
 
   it("reads limits from config/app", async () => {
-    await db.doc("config/app").set({ limitFree: 1 });
-    resetConfigCache();
+    try {
+      await db.doc("config/app").set({ limitFree: 1 });
+      resetConfigCache();
+      const dev = newDeviceId();
+      await call(dev);
+      await expect(call(dev)).rejects.toMatchObject({ code: "resource-exhausted" });
+    } finally {
+      await db.doc("config/app").delete();
+      resetConfigCache();
+    }
+  });
+
+  it("preserves premium ownership fields", async () => {
     const dev = newDeviceId();
+    await quotaRef(dev).set({ premiumUntil: NOW + DAY, premiumToken: "tok" });
     await call(dev);
-    await expect(call(dev)).rejects.toMatchObject({ code: "resource-exhausted" });
-    await db.doc("config/app").delete();
+    const doc = await quotaRef(dev).get();
+    expect(doc.get("premiumUntil")).toBe(NOW + DAY);
+    expect(doc.get("premiumToken")).toBe("tok");
   });
 });

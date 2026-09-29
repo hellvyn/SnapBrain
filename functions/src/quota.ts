@@ -5,6 +5,8 @@ export interface QuotaDoc {
   rewardsDay: string;
   rewardsToday: number;
   premiumUntil: number | null;
+  /** sha256 of the purchase token that granted premium; owned by purchases.ts. */
+  premiumToken?: string | null;
 }
 
 export interface QuotaLimits {
