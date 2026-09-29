@@ -10,6 +10,9 @@ import com.snapbrain.core.needsAi
 import com.snapbrain.core.normalized
 import com.snapbrain.core.statusAfter
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.UUID
 
 class ItemRepository(
@@ -22,30 +25,46 @@ class ItemRepository(
     fun observe(id: String) = dao.observeById(id)
 
     /** Saves the screenshot locally before any network call, so nothing is lost offline. */
-    suspend fun capture(uri: Uri): ItemEntity {
+    suspend fun capture(uri: Uri): ItemEntity = withContext(Dispatchers.IO) {
         val id = UUID.randomUUID().toString()
         val file = images.save(uri, id)
-        val text = try {
-            ocr.read(file)
+        val now = System.currentTimeMillis()
+        val item = try {
+            val text = ocr.read(file)
+            if (needsAi(text)) {
+                ItemEntity(id, now, file.path, text, ItemStatus.UNPROCESSED.name)
+            } else {
+                ItemEntity(id, now, file.path, text, ItemStatus.DONE.name, category = "unclassified")
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            ""
-        }
-        val item = if (needsAi(text)) {
-            ItemEntity(id, System.currentTimeMillis(), file.path, text, ItemStatus.UNPROCESSED.name)
-        } else {
-            ItemEntity(id, System.currentTimeMillis(), file.path, text, ItemStatus.DONE.name, category = "unclassified")
+            // OCR failed (not "no text"): keep the item UNPROCESSED with empty text so process() re-runs OCR.
+            ItemEntity(id, now, file.path, "", ItemStatus.UNPROCESSED.name)
         }
         dao.insert(item)
-        return item
+        item
     }
 
     suspend fun process(item: ItemEntity): ItemEntity {
-        val updated = when (val outcome = client.extract(item.id, item.ocrText)) {
+        var current = item
+        if (item.ocrText.isEmpty()) {
+            val text = try {
+                withContext(Dispatchers.IO) { ocr.read(File(item.imagePath)) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                return retryLater(item)
+            }
+            current = item.copy(ocrText = text)
+            if (!needsAi(text)) {
+                return current.copy(status = ItemStatus.DONE.name, category = "unclassified").also { dao.update(it) }
+            }
+        }
+        val updated = when (val outcome = client.extract(current.id, current.ocrText)) {
             is ExtractOutcome.Success -> {
                 val d = outcome.response.data.normalized()
-                item.copy(
+                current.copy(
                     status = ItemStatus.DONE.name,
                     category = d.category,
                     title = d.title,
@@ -56,18 +75,30 @@ class ItemRepository(
                     tasksTotal = outcome.response.tasksTotal,
                 )
             }
-            ExtractOutcome.Retryable -> {
-                val attempts = item.attempts + 1
-                item.copy(status = statusAfter(outcome, attempts).name, attempts = attempts)
-            }
-            else -> item.copy(status = statusAfter(outcome, item.attempts).name)
+            ExtractOutcome.Retryable -> return retryLater(current)
+            else -> current.copy(status = statusAfter(outcome, current.attempts).name)
         }
         dao.update(updated)
         return updated
     }
 
+    private suspend fun retryLater(item: ItemEntity): ItemEntity {
+        val attempts = item.attempts + 1
+        return item.copy(status = statusAfter(ExtractOutcome.Retryable, attempts).name, attempts = attempts)
+            .also { dao.update(it) }
+    }
+
     suspend fun processPending() {
-        dao.withStatus(ItemStatus.UNPROCESSED.name).forEach { process(it) }
+        dao.withStatus(ItemStatus.UNPROCESSED.name).forEach {
+            try {
+                process(it)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // One bad item must not strand the rest of the queue.
+                retryLater(it)
+            }
+        }
     }
 
     suspend fun hasPending(): Boolean = dao.countWithStatus(ItemStatus.UNPROCESSED.name) > 0
