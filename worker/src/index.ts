@@ -65,7 +65,11 @@ export function createApp(o: Overrides = {}) {
       try {
         return await route(req, env);
       } catch (e) {
-        if (e instanceof ApiError) return json({ error: wireCodeOf(e.code) }, httpStatusOf(e.code));
+        if (e instanceof ApiError) {
+          // "unavailable" messages are fixed strings or LLM status summaries, so they are safe to log and say why.
+          if (e.code === "unavailable") console.error(JSON.stringify({ error: "unavailable", reason: e.message }));
+          return json({ error: wireCodeOf(e.code) }, httpStatusOf(e.code));
+        }
         // Never log request bodies or error messages: both can carry OCR text.
         console.error(JSON.stringify({ error: e instanceof Error ? e.name : "unknown" }));
         return json({ error: "INTERNAL" }, 500);

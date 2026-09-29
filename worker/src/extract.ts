@@ -62,7 +62,8 @@ export async function handleExtract(input: Record<string, unknown>, deps: Extrac
   try {
     data = await deps.extract(text, dateContextOf(input, now));
   } catch (e) {
-    if (e instanceof LlmUnavailable) throw new ApiError("unavailable", "llm");
+    // e.message is our own summary ("status=401", "schema", "TimeoutError"), never model or OCR text.
+    if (e instanceof LlmUnavailable) throw new ApiError("unavailable", `llm ${e.message}`);
     throw e;
   }
 
