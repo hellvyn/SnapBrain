@@ -61,4 +61,28 @@ describe("createExtractor", () => {
     await expect(createExtractor(client)("x", CFG)).rejects.toBeInstanceOf(LlmUnavailable);
     expect(parse).toHaveBeenCalledTimes(2);
   });
+
+  it("throws LlmUnavailable after two unparseable responses", async () => {
+    const { client, parse } = fakeClient(
+      { stop_reason: "end_turn", parsed_output: null },
+      { stop_reason: "end_turn", parsed_output: null },
+    );
+    await expect(createExtractor(client)("x", CFG)).rejects.toBeInstanceOf(LlmUnavailable);
+    expect(parse).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not leak OCR text into error message", async () => {
+    const { client, parse } = fakeClient(
+      new Error("secret OCR text"),
+      new Error("secret OCR text"),
+    );
+    let thrownError: LlmUnavailable | undefined;
+    try {
+      await createExtractor(client)("x", CFG);
+    } catch (e) {
+      thrownError = e as LlmUnavailable;
+    }
+    expect(thrownError).toBeInstanceOf(LlmUnavailable);
+    expect(thrownError!.message).not.toContain("secret OCR text");
+  });
 });

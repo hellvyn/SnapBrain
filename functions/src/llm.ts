@@ -44,7 +44,9 @@ export function createExtractor(client: Anthropic): ExtractFn {
         if (res.stop_reason !== "refusal" && res.parsed_output) return toExtractData(res.parsed_output);
         lastError = `stop_reason=${res.stop_reason}`;
       } catch (e) {
-        lastError = e instanceof Error ? e.message : String(e);
+        const errorName = e instanceof Error ? e.constructor.name : "unknown";
+        const status = typeof (e as { status?: unknown }).status === "number" ? (e as { status: number }).status : undefined;
+        lastError = `${errorName}${status !== undefined ? ` status=${status}` : ""}`;
       }
     }
     throw new LlmUnavailable(lastError);
