@@ -121,8 +121,9 @@ class ItemRepository(
             // OCR failed (not "no text"): keep the item UNPROCESSED with empty text so process() re-runs OCR.
             ItemEntity(id, now, file.path, "", ItemStatus.UNPROCESSED.name)
         }
-        dao.insert(item)
+        // Mark before the row exists, so a worker picking it up in between can never schedule it unconfirmed.
         markUnconfirmed(id)
+        dao.insert(item)
         item
     }
 
