@@ -3,6 +3,7 @@
 - **Tanggal:** 2026-09-29
 - **Status:** Draft, menunggu review
 - **Sumber:** PRD "SnapBrain (Screenshot-to-Action AI)" + sesi brainstorming 2026-09-29
+- **Revisi:** backend diganti Cloudflare Workers + D1 dan LLM milik user. Lihat `2026-09-29-snapbrain-cloudflare-backend-design.md`. Revisi itu menggantikan D4, D5, §4.2, §5.2 dan RTDN di §8
 
 ## 1. Tujuan & kriteria sukses
 
