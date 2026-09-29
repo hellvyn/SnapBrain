@@ -25,7 +25,7 @@
 | D3 | Kotlin + Jetpack Compose, Android-only | Semua fitur inti adalah API native Android |
 | D4 | Backend Firebase (Cloud Functions TS, Firestore, Anonymous Auth, App Check + Play Integrity) | Satu ekosistem, tanpa server yang harus dikelola |
 | D5 | LLM via API. Endpoint/model disimpan di config. Model launch dipilih lewat eval (§10). Self-host dievaluasi ulang setelah ada data volume | Biaya per request lebih murah di volume awal yang belum pasti |
-| D6 | Kuota: Free 15/bulan, Premium 300/bulan (bukan 1000). Keduanya di Remote Config | FUP 1000 berpotensi rugi per user (lihat catatan biaya di §11) |
+| D6 | Kuota: Free 15/bulan, Premium 300/bulan (bukan 1000). Disimpan di dokumen Firestore `config/app` (bisa diubah dari Console tanpa deploy/rilis). Juga menyimpan model & effort LLM | FUP 1000 berpotensi rugi per user (lihat catatan biaya di §11) |
 | D7 | Reward video: +3 proses per video, maks 3 video/hari, diverifikasi server | Default yang disetujui |
 | D8 | Alur share hibrida: simpan dulu, coba sinkron (timeout 6 dtk), fallback ke antrian background | UX instan + tidak ada data hilang |
 | D9 | Kuota dicatat per `deviceKey`, bukan per uid. App mengirim `device_id` = SHA-256(`ANDROID_ID`); server menghitung `deviceKey` = SHA-256(`device_id` + salt rahasia) | uid anonim berubah saat reinstall. `ANDROID_ID` stabil lintas reinstall di Android 8+ |
@@ -101,11 +101,17 @@ quota/{deviceKey}
   bonus         number      -- dari reward video, hangus di akhir bulan
   rewardsDay    "2026-09-29"
   rewardsToday  number
-  premiumUntil  timestamp?
-  purchaseToken string?     -- hash
+  premiumUntil  number?     -- epoch ms
 ```
 
 Limit efektif = (`premiumUntil > now` ? `limitPremium` : `limitFree`) + `bonus`.
+
+```
+quota/{deviceKey}/charges/{itemId}_{f|p}   -- penanda item sudah ditagih (idempotensi), expireAt 40 hari (TTL)
+rewards/{sha256(transaction_id)}          -- idempotensi callback AdMob, expireAt 40 hari (TTL)
+purchases/{sha256(purchaseToken)}         -- { deviceKey }
+config/app                                -- limitFree, limitPremium, rewardAmount, rewardMaxPerDay, llmModel, llmEffort
+```
 
 Satu purchase token hanya terhubung ke **satu** `deviceKey`. Restore di HP baru akan memindahkan premium ke HP itu.
 
@@ -115,7 +121,7 @@ Security rules: semua koleksi `read, write: if false`. Hanya Functions (Admin SD
 
 ## 6. API contract `extract`
 
-**Request:** `{ ocr_text: string, device_id: string }`. Ditolak dengan `invalid-argument` jika kosong atau > 20.000 karakter.
+**Request:** `{ ocr_text: string, device_id: string, item_id: string (UUID) }`. `item_id` membuat penagihan idempoten: retry item yang sama (misal app timeout 6 dtk tapi server sukses, lalu `ProcessWorker` mengulang) tidak dipotong kuota dua kali. Ditagih ulang hanya jika tier berubah (proses ulang setelah upgrade, §8). Ditolak dengan `invalid-argument` jika kosong atau > 20.000 karakter.
 
 **Response sukses:**
 ```json
