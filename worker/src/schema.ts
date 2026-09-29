@@ -24,6 +24,10 @@ const each = <T extends z.ZodType>(schema: T) =>
     }),
   );
 
+const text = z.union([z.string(), z.number()]).transform(String);
+// "Rp 1.250.000" -> 1250000; a dot before exactly three digits is a thousands separator, not a decimal.
+const rupiah = (x: unknown) => (typeof x === "string" ? x.replace(/[^\d.,-]/g, "").replace(/\.(?=\d{3}(?!\d))/g, "") : x);
+
 // Small models often send an item as a bare string or a price as "189000"; both still count.
 const LlmItem = z.preprocess(
   (x) => (typeof x === "string" ? { text: x } : x),
@@ -31,7 +35,7 @@ const LlmItem = z.preprocess(
     text: z.string(),
     due: z.string().catch(""),
     minutes: z.coerce.number().catch(0),
-    price: z.coerce.number().catch(0),
+    price: z.preprocess(rupiah, z.coerce.number()).catch(0),
     size: z.string().catch(""),
   }),
 );
@@ -40,7 +44,7 @@ const LlmItem = z.preprocess(
 export const LlmOutput = z.object({
   category: z.enum(CATEGORIES),
   title: z.string(),
-  info: each(z.object({ key: z.string(), value: z.string() })),
+  info: each(z.object({ key: z.string(), value: text })),
   lists: each(
     z.object({
       title: z.string().catch(""),
@@ -49,7 +53,7 @@ export const LlmOutput = z.object({
       items: each(LlmItem),
     }),
   ),
-  actions: each(z.object({ type: z.string(), payload: z.string() })),
+  actions: each(z.object({ type: z.string(), payload: text })),
   activation: z.enum(ACTIVATIONS).catch("none"),
 });
 export type LlmOutput = z.infer<typeof LlmOutput>;

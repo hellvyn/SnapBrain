@@ -12,6 +12,17 @@ describe("LlmOutput", () => {
     expect(o.lists[0].items).toEqual([item("1 kg ayam"), item("Gamis", { price: 189000 })]);
   });
 
+  it("keeps numeric info values and action payloads as strings", () => {
+    const o = out({ info: [{ key: "Porsi", value: 4 }], actions: [{ type: "whatsapp", payload: 81234567890 }] });
+    expect(o.info).toEqual([{ key: "Porsi", value: "4" }]);
+    expect(toExtractData(o).actions).toEqual([{ type: "whatsapp", payload: "6281234567890" }]);
+  });
+
+  it("strips Indonesian thousands separators from price", () => {
+    const price = (v: unknown) => out({ lists: [list([{ text: "x", price: v }])] }).lists[0].items[0].price;
+    expect([price("189.000"), price("Rp189.000"), price("Rp 1.250.000"), price(189000), price("gratis")]).toEqual([189000, 189000, 1250000, 189000, 0]);
+  });
+
   it("falls back for unknown kind, role and activation", () => {
     const o = out({ lists: [list([item("a")], { kind: "table", role: "hobi" })], activation: "dance" });
     expect(o.lists[0]).toMatchObject({ kind: "checklist", role: "lainnya" });

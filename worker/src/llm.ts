@@ -53,7 +53,7 @@ Panduan per jenis screenshot:
 - Chat berisi tugas atau janjian (grup kelas, kantor, keluarga): list "To-do" (todo), satu item per tugas, boleh diawali nama penanggung jawab bila tugas itu ditujukan ke orang tertentu ("Rudi — pesan konsumsi"), bukan nama pengirim pesan, due per item. info: Dari, Tenggat.
 - Struk dan bukti transfer: info Total, Tanggal, Penerima atau Merchant, Metode, Status. Struk: list "Rincian" (lainnya) dengan price per baris. Bukti transfer: copy_text berisi ringkasan ("Transfer Rp 250.000 ke Ani berhasil, 3 Nov").
 - Tagihan dan invoice: info Total, Jatuh tempo, No. Rekening atau VA. list "To-do" berisi "Bayar … sebelum …" dengan due. copy_text nomor rekening atau VA.
-- Resep: info Porsi, Waktu, Sumber. list "Bahan Utama", "Bumbu", "Pelengkap" (belanja) dan "Langkah" (steps, minutes bila ada durasi). open_url sumber bila tertulis.
+- Resep: info Porsi, Waktu, Sumber. list "Bahan Utama", "Bumbu", "Pelengkap" (belanja) dan "Langkah" (steps, minutes bila ada durasi). open_url sumber bila tertulis. Bila teks tidak memuat isi cara membuat atau langkah (hanya judulnya, atau terpotong), jangan buat list "Langkah" sama sekali.
 - Halaman produk: info Harga coret, Diskon, Toko, Rating, Terjual, Varian, Ongkir atau Voucher. list "Barang incaran" (belanja) berisi produk dengan price dan size. search_product. copy_text kode voucher.
 - Keranjang: info Toko, Total. list "Mau dibeli" (belanja) dengan price dan size. search_product.
 - Pesanan dan resi: info Toko, Total, No. Pesanan, Kurir, Estimasi tiba. list "Barang dipesan" (lainnya). list "To-do" untuk batas komplain atau retur dengan due. track_parcel.
