@@ -48,7 +48,9 @@ import com.snapbrain.core.actionOf
 import com.snapbrain.core.canDeleteOriginal
 import com.snapbrain.core.categoryLabel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 private const val SYNC_TIMEOUT_MS = 6_000L
@@ -59,6 +61,7 @@ private sealed interface ShareState {
     data class Result(val item: ItemEntity) : ShareState
     data object Queued : ShareState
     data object QuotaBlocked : ShareState
+    data object Failed : ShareState
     data object Unreadable : ShareState
 }
 
@@ -86,7 +89,8 @@ private fun ShareSheet(uri: Uri, repository: ItemRepository, onClose: () -> Unit
 
     LaunchedEffect(uri) {
         val item = try {
-            repository.capture(uri)
+            // Dismissing mid-capture must not leave an orphan JPEG or a row without itemId.
+            withContext(NonCancellable) { repository.capture(uri) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -104,13 +108,16 @@ private fun ShareSheet(uri: Uri, repository: ItemRepository, onClose: () -> Unit
         state = when (processed?.status) {
             ItemStatus.DONE.name -> ShareState.Result(processed)
             ItemStatus.QUOTA_BLOCKED.name -> ShareState.QuotaBlocked
+            ItemStatus.FAILED.name -> ShareState.Failed
             else -> ShareState.Queued
         }
+        // Enqueue now so process death while the sheet is open does not strand the item.
+        if (state is ShareState.Queued) ProcessWorker.enqueue(context.applicationContext)
     }
     // Leaving before the AI answered (timeout, offline, sheet closed): the worker picks the item up.
     DisposableEffect(Unit) {
         onDispose {
-            val done = state is ShareState.Result || state is ShareState.QuotaBlocked || state is ShareState.Unreadable
+            val done = state is ShareState.Result || state is ShareState.QuotaBlocked || state is ShareState.Failed || state is ShareState.Unreadable
             if (itemId != null && !done) ProcessWorker.enqueue(context.applicationContext)
         }
     }
@@ -122,6 +129,10 @@ private fun ShareSheet(uri: Uri, repository: ItemRepository, onClose: () -> Unit
                 ShareState.Analyzing -> Loading("AI sedang menganalisis konteks...")
                 ShareState.Unreadable -> {
                     Text("Gambar tidak bisa dibaca.")
+                    Button(onClick = onClose) { Text("Tutup") }
+                }
+                ShareState.Failed -> {
+                    Text("Gagal diproses. Buka SnapBrain untuk coba lagi.")
                     Button(onClick = onClose) { Text("Tutup") }
                 }
                 ShareState.Queued -> {
@@ -148,8 +159,14 @@ private fun ShareSheet(uri: Uri, repository: ItemRepository, onClose: () -> Unit
                         Button(onClick = onClose) { Text("Simpan") }
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && canDeleteOriginal(Build.VERSION.SDK_INT, uri.authority)) {
                             OutlinedButton(onClick = {
-                                val request = MediaStore.createDeleteRequest(context.contentResolver, listOf(uri))
-                                deleteOriginal.launch(IntentSenderRequest.Builder(request.intentSender).build())
+                                try {
+                                    val request = MediaStore.createDeleteRequest(context.contentResolver, listOf(uri))
+                                    deleteOriginal.launch(IntentSenderRequest.Builder(request.intentSender).build())
+                                } catch (e: IllegalArgumentException) {
+                                    onClose()
+                                } catch (e: SecurityException) {
+                                    onClose()
+                                }
                             }) { Text("Simpan & Hapus Asli") }
                         }
                     }

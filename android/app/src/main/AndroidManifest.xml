@@ -19,6 +19,7 @@
             android:name=".share.ShareActivity"
             android:exported="true"
             android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|uiMode|density|fontScale|keyboardHidden|keyboard|locale|layoutDirection"
             android:taskAffinity=""
             android:theme="@style/Theme.SnapBrain.Translucent">
             <intent-filter>
