@@ -45,3 +45,31 @@ Pasang APK baru **di atas** APK lama (jangan uninstall dulu) untuk menguji migra
    - produk Shopee (harga terbaca, tombol "Cari di Shopee");
    - undangan acara (Kalender + Maps).
 7. **Mode gelap:** ubah tema HP ke gelap. Semua layar tetap terbaca.
+
+## Fase B (pengingat)
+
+Siapkan: screenshot chat grup dengan tenggat "besok" dan satu dengan jam ("hari ini jam 21:00", minimal 2 jam dari sekarang).
+
+1. **Izin:** di Android 13+, setelah screenshot bertenggat pertama diproses, kartu "Nyalakan notifikasi" muncul di atas navigasi bawah. "Izinkan" menampilkan dialog sistem. Bila ditolak, 🔔 di Detail tampil mati; tap 🔔 membuka setelan notifikasi app. "Nanti" menyembunyikan kartu.
+2. **Jadwal:** tenggat jam 21:00 → notifikasi sekitar 20:00 (boleh telat beberapa menit): judul "⏰ <teks> — jam 21:00", isi "dari: <judul>". Tenggat besok tanpa jam → notifikasi besok 08:00 "— hari ini" (dan hari ini 08:00 "— besok" bila belum lewat).
+   - Cepat: ubah jam HP maju melewati waktu pengingat, lalu tunggu 1–2 menit.
+3. **Selesai:** tombol "Selesai" di notifikasi mencentang item (cek di Detail) dan menutup notifikasi. Tap notifikasi membuka Detail item itu tanpa splash.
+4. **Batal:** centang item bertenggat, matikan 🔔 item, atau hapus screenshot-nya sebelum waktunya → notifikasi tidak muncul.
+5. **Sakelar global:** Inbox ⋮ → "Matikan semua pengingat" → tidak ada notifikasi; 🔔 di Detail tampil mati dan tap menampilkan petunjuk. "Nyalakan pengingat" menjadwalkan ulang item bertenggat yang belum dicentang.
+6. **Restart HP:** pengingat yang sudah dijadwalkan tetap muncul.
+
+## Fase C (Belanja, To-do)
+
+1. **Navigasi:** bar bawah Inbox · Belanja · To-do. Back dari Belanja/To-do kembali ke Inbox. Buka Detail dari Belanja/To-do lalu back → kembali ke tab asal.
+2. **Aktivasi:**
+   - resep → "Masak sekarang" → menjadi "✓ Ada di Belanja & To-do"; bahan muncul di Belanja, langkah di To-do di bawah judul resep;
+   - produk/keranjang → "Mau beli" → "✓ Ada di Belanja";
+   - chat tugas → "Kerjakan" → "✓ Ada di To-do";
+   - tap lagi → item yang belum dicentang keluar dari Belanja/To-do;
+   - tagihan tanpa daftar tugas: tombol tidak tampil.
+3. **Belanja per bahan:** dua resep yang sama-sama memakai bawang merah tampil satu baris "Bawang merah" dengan dua sub-baris (jumlah tidak dijumlahkan). Satu centang mencentang keduanya. "Per asal" mengelompokkan per screenshot; tap judul membuka Detail.
+4. **Belanja tombol:** "Sembunyikan yang dicentang", Bagikan (teks ☐/☑ per screenshot), "Selesai belanja" mengeluarkan item yang dicentang (di Detail tetap tercentang).
+5. **Total & budget:** "N barang · Rp X" hanya dari item belum dicentang yang ada harganya, "N tanpa harga" untuk sisanya. Atur budget (menu ⋮ atau tombol "Atur budget bulanan") → tampil Budget, Terbeli, Sisa. Centang produk berharga → Terbeli naik. Incaran > Sisa → peringatan merah. Kosongkan budget → bagian budget hilang.
+6. **Bandingkan:** menu ⋮ → "Bandingkan harga" → pilih 2–3 screenshot produk (pilihan ke-4 tidak bisa) → tabel Harga, Ukuran, Per satuan ("Rp …/100 ml", "/100 g", "/item", atau "–"), lalu label info lain. Back kembali ke pilihan, back lagi menutup.
+7. **To-do:** grup Terlambat · Hari ini · Minggu ini · Nanti · Tanpa tenggat, langkah resep di grup judul resep. Centang dari To-do tersimpan di Detail. "Tampilkan selesai" memunculkan item tercentang. 🔔 per item bertenggat.
+8. **Mode gelap:** Belanja, To-do, dialog budget, Bandingkan, dan navigasi bawah tetap terbaca.

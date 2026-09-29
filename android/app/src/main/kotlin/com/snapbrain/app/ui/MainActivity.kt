@@ -36,9 +36,10 @@ import com.snapbrain.app.SnapBrainApp
 import com.snapbrain.app.process.ProcessWorker
 import com.snapbrain.core.IS_PRO
 
-/** Spec §8 bottom navigation; Belanja joins in Task 5. */
+/** Spec §8 bottom navigation. */
 private enum class Tab(val label: String, val icon: ImageVector) {
     INBOX("Inbox", SnapIcons.Inbox),
+    BELANJA("Belanja", SnapIcons.Shopping),
     TODO("To-do", SnapIcons.Task),
 }
 
@@ -109,6 +110,7 @@ class MainActivity : ComponentActivity() {
                                             headerHeightPx,
                                             onOpen = { openId = it },
                                         )
+                                        Tab.BELANJA -> BelanjaScreen(repository, onOpen = { openId = it })
                                         Tab.TODO -> TodoScreen(repository, onOpen = { openId = it })
                                     }
                                 }
