@@ -20,3 +20,29 @@ Prasyarat: backend Cloudflare sudah di-deploy dan secret Worker diisi (docs/clou
 14. Putar layar (rotate) di Detail dan di Inbox. Teks pencarian, filter chip, dan posisi scroll tetap. Kembali dari Detail ke Inbox juga mempertahankan ketiganya.
 15. Detail: setelah zoom, gambar tetap tajam dan tidak bisa digeser keluar batas. Saat tidak zoom, menggeser di area gambar tetap men-scroll halaman.
 16. Mode gelap: aktifkan tema gelap di sistem, lalu cek Inbox, Detail, dialog "Hapus screenshot ini?" dan sheet Share. Teks terbaca dan tidak ada latar putih yang mencolok.
+
+## Fase A (daftar pintar, tampilan baru)
+
+Pasang APK baru **di atas** APK lama (jangan uninstall dulu) untuk menguji migrasi database.
+
+1. **Migrasi:** app terbuka tanpa crash. Screenshot lama masih ada. Detail item lama menampilkan checklist "Tugas" lama.
+2. **Splash:** buka app dari launcher. Logo, "SnapBrain", dan "made with ❤️ by hellvyn" tampil sekitar 3 detik. Tap layar untuk melewati. Tap "hellvyn" membuka hellvyn.id. Share gambar dari Galeri tidak menampilkan splash.
+3. **Ikon:** ikon di launcher memakai logo baru.
+4. **Inbox:**
+   - kartu memakai ikon kategori, bukan gambar;
+   - progres "x/y" dan tenggat terdekat tampil;
+   - chip kategori dan kotak cari hilang saat scroll ke bawah dan muncul lagi saat scroll ke atas;
+   - pill kuota tampil setelah satu screenshot diproses.
+5. **Detail:**
+   - gambar tidak tampil sampai "Lihat screenshot asli" ditekan; di dialog, gambar bisa di-zoom;
+   - maksimal 3 tombol aksi, dan masing-masing bekerja (kalender, Maps, WA, telepon membuka dialer tanpa menelepon, cari di Shopee/Tokopedia, salin);
+   - centang item tersimpan setelah app ditutup dan dibuka lagi;
+   - daftar > 8 item terlipat dengan "Tampilkan semua";
+   - chip "x mnt" membuka timer di app Jam;
+   - menu kartu "Salin daftar" dan "Bagikan daftar", serta tombol Bagikan di app bar, menghasilkan teks dengan ☐/☑.
+6. **Contoh wajib:**
+   - resep (bahan utama dan bumbu terpisah, tanpa item dobel);
+   - chat grup dengan tenggat "besok jam …" (tenggat tanggal besok);
+   - produk Shopee (harga terbaca, tombol "Cari di Shopee");
+   - undangan acara (Kalender + Maps).
+7. **Mode gelap:** ubah tema HP ke gelap. Semua layar tetap terbaca.

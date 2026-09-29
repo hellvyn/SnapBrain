@@ -6,31 +6,56 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.AlarmClock
 import android.provider.CalendarContract
 import android.widget.Toast
 import com.snapbrain.core.Action
 
 fun Context.perform(action: Action) {
-    val intent = when (action) {
-        is Action.OpenUrl -> Intent(Intent.ACTION_VIEW, Uri.parse(action.url))
-        is Action.TrackParcel -> Intent(Intent.ACTION_VIEW, Uri.parse(action.searchUrl))
-        is Action.AddCalendar -> Intent(Intent.ACTION_INSERT)
-            .setData(CalendarContract.Events.CONTENT_URI)
-            .putExtra(CalendarContract.Events.TITLE, action.title)
-            .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, action.beginMillis)
-        is Action.OpenMaps -> Intent(Intent.ACTION_VIEW, Uri.parse(action.geoUri))
-        is Action.WhatsApp -> Intent(Intent.ACTION_VIEW, Uri.parse(action.url))
-        is Action.Call -> Intent(Intent.ACTION_DIAL, Uri.parse("tel:${action.number}"))
-        is Action.SearchProduct -> Intent(Intent.ACTION_VIEW, Uri.parse(action.url))
-        is Action.CopyText -> {
-            getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("SnapBrain", action.text))
-            Toast.makeText(this, "Disalin", Toast.LENGTH_SHORT).show()
-            return
-        }
+    when (action) {
+        is Action.CopyText -> copyText(action.text)
+        is Action.OpenUrl -> launch(view(action.url))
+        is Action.TrackParcel -> launch(view(action.searchUrl))
+        is Action.WhatsApp -> launch(view(action.url))
+        is Action.SearchProduct -> launch(view(action.url))
+        is Action.Call -> launch(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + action.number)))
+        // Prefer a maps app; fall back to Google Maps on the web.
+        is Action.OpenMaps -> if (!launch(view(action.geoUri), quiet = true)) launch(view(action.webUrl))
+        is Action.AddCalendar -> launch(
+            Intent(Intent.ACTION_INSERT)
+                .setData(CalendarContract.Events.CONTENT_URI)
+                .putExtra(CalendarContract.Events.TITLE, action.title)
+                .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, action.beginMillis),
+        )
     }
-    try {
-        startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    } catch (e: ActivityNotFoundException) {
-        Toast.makeText(this, "Tidak ada aplikasi untuk membuka ini", Toast.LENGTH_SHORT).show()
-    }
+}
+
+fun Context.copyText(text: String) {
+    getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("SnapBrain", text))
+    Toast.makeText(this, "Disalin", Toast.LENGTH_SHORT).show()
+}
+
+fun Context.shareText(text: String) {
+    launch(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), null))
+}
+
+/** Opens the clock app's timer, filled in but not started (the user confirms). */
+fun Context.startTimer(minutes: Int, label: String) {
+    launch(
+        Intent(AlarmClock.ACTION_SET_TIMER)
+            .putExtra(AlarmClock.EXTRA_LENGTH, minutes * 60)
+            .putExtra(AlarmClock.EXTRA_MESSAGE, label.take(60))
+            .putExtra(AlarmClock.EXTRA_SKIP_UI, false),
+    )
+}
+
+private fun view(url: String) = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+
+/** Starts [intent]; returns false, telling the user unless [quiet], when no app can handle it. */
+private fun Context.launch(intent: Intent, quiet: Boolean = false): Boolean = try {
+    startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    true
+} catch (e: ActivityNotFoundException) {
+    if (!quiet) Toast.makeText(this, "Tidak ada aplikasi untuk membuka ini", Toast.LENGTH_SHORT).show()
+    false
 }
