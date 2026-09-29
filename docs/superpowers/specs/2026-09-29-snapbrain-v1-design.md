@@ -47,7 +47,7 @@
 | `ImageStore` | Menyalin gambar ke `filesDir/images/{id}.jpg` (dikompres, sisi terpanjang maks 2048px) |
 | `OcrEngine` | ML Kit Text Recognition (Latin), **model bundled**, agar share pertama tetap jalan offline |
 | `ExtractApi` | Memanggil callable function `extract` |
-| `ItemRepository` | Room + tabel FTS4 untuk search |
+| `ItemRepository` | Room; search dengan `LIKE` di teks OCR/judul (FTS4 ditunda sampai dibutuhkan) |
 | `ProcessWorker` | WorkManager, constraint `CONNECTED`, backoff eksponensial |
 | `MainActivity` | Inbox, Search, Detail (Navigation Compose) |
 | `Entitlement` | Play Billing Library + cache status premium dari server |
@@ -87,10 +87,9 @@ Item
   tasksTotal    INTEGER DEFAULT 0
   attempts      INTEGER DEFAULT 0
 
-ItemFts (FTS4, contentEntity = Item): title, ocrText, category
 ```
 
-Inbox: `ORDER BY createdAt DESC`. Search: `MATCH` query di `ItemFts` + filter kategori.
+Inbox: `ORDER BY createdAt DESC`. Search: `LIKE` di `ocrText`/`title` + filter kategori.
 
 ### 5.2 Firestore
 
@@ -193,7 +192,6 @@ Mengikuti PRD bagian "UI / UX Component Architecture" (Inbox, SmartCard, Detail)
 **Kode:**
 - Unit test (JVM): pemetaan `action_type` → aksi, parsing respons, logika status item, logika reset bulan/kuota di Functions.
 - Firebase Emulator: `extract` (kuota sukses/habis/gagal-tidak-dipotong), `adReward` (batas 3/hari), security rules menolak akses dari klien.
-- Instrumented: query FTS di Room.
 - Manual matrix sebelum rilis: share dari Galeri, WhatsApp, Chrome, dan File manager; mode pesawat; kuota habis; beli, batal, restore (license tester Play).
 
 **Eval model (sebelum rilis):**
