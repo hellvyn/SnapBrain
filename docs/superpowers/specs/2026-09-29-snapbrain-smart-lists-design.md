@@ -42,6 +42,8 @@
 | S15 | Inbox memakai ikon kategori, bukan thumbnail. Screenshot di Detail baru tampil setelah "Lihat screenshot asli" ditekan | Pilihan user. Tampilan seragam; hasil ekstraksi jadi fokus |
 | S16 | Chip kategori berikon di Inbox, menyembunyikan diri saat scroll ke bawah | Pilihan user, dibanding menu hamburger: filter tetap satu tap |
 | S17 | Fase uji gratis penuh: semua fitur terbuka (`isPro` selalu `true`) dan `LIMIT_FREE` = 1000/bulan. Dikembalikan ke 15 dan kunci Pro diaktifkan di Rencana 3 sebelum rilis | Pilihan user untuk testing. Batas tetap ada sebagai pengaman bila bug memicu request berulang atau ada penyalahgunaan |
+| S18 | Pengingat screenshot hasil share baru aktif setelah pengguna menekan "Simpan" di sheet share atau membuka item-nya. Share tetap otomatis disimpan dan diproses | Security review F1: app lain yang sedang tampil bisa mengirim gambar ke ShareActivity; tanpa konfirmasi, teksnya muncul sebagai notifikasi atas nama SnapBrain |
+| S19 | Database (teks OCR dan hasil ekstraksi) tetap ikut Auto Backup Google; gambar tidak | Pilihan pengguna: data ikut pindah HP. Security review F4 mencatat risikonya (akses ke akun backup) |
 
 ## 3. Kontrak `POST /extract` (baru)
 
