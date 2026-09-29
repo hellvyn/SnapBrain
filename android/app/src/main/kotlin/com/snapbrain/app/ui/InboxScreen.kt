@@ -1,44 +1,66 @@
 package com.snapbrain.app.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.snapbrain.app.data.ItemEntity
 import com.snapbrain.app.data.ItemRepository
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+private data class Filter(val label: String, val key: String?)
 
 private val FILTERS = listOf(
-    "Semua" to null,
-    "Tugas" to "task",
-    "Keuangan" to "finance",
-    "Event" to "event",
-    "Belanja" to "shopping",
-    "Referensi" to "reference",
+    Filter("Semua", null),
+    Filter("Tugas", "task"),
+    Filter("Keuangan", "finance"),
+    Filter("Belanja", "shopping"),
+    Filter("Event", "event"),
+    Filter("Referensi", "reference"),
+    Filter("Lainnya", "unclassified"),
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val HEADER_DATE = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.forLanguageTag("id"))
+
 @Composable
 fun InboxScreen(
     repository: ItemRepository,
@@ -50,44 +72,112 @@ fun InboxScreen(
     onOpen: (String) -> Unit,
 ) {
     val items: List<ItemEntity>? by remember(query, category) { repository.observe(query, category) }.collectAsState(initial = null)
+    val progress by remember { repository.observeProgress().map { rows -> rows.associateBy { it.itemId } } }.collectAsState(initial = emptyMap())
+    val quota by repository.quota.collectAsState()
+    val scope = rememberCoroutineScope()
+    // Search and chips hide while scrolling down and come back on the way up (spec S16).
+    val showFilters = listState.isScrollingUp()
+    val now = LocalDateTime.now()
 
-    Scaffold(topBar = { TopAppBar(title = { Text("SnapBrain") }) }) { padding ->
+    Scaffold { padding ->
         Column(Modifier.padding(padding)) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                placeholder = { Text("Cari resep, resi, catatan...") },
-                leadingIcon = { Text("🔍") },
-                singleLine = true,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            )
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(FILTERS) { (label, key) ->
-                    FilterChip(selected = category == key, onClick = { onCategoryChange(key) }, label = { Text(label) })
+            Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        LocalDate.now().format(HEADER_DATE),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text("Screenshot kamu", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                }
+                quota?.let { q ->
+                    Text(
+                        "Kuota ${q.used}/${q.limit}",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f), RoundedCornerShape(50))
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                    )
+                }
+                AnimatedVisibility(visible = !showFilters) {
+                    IconButton(onClick = { scope.launch { listState.animateScrollToItem(0) } }) {
+                        Icon(SnapIcons.Search, contentDescription = "Cari")
+                    }
                 }
             }
-            val list = items
-            if (list == null) return@Column
+            AnimatedVisibility(visible = showFilters) {
+                Column {
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = onQueryChange,
+                        placeholder = { Text("Cari screenshot, bahan, tugas…") },
+                        leadingIcon = { Icon(SnapIcons.Search, contentDescription = null) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                        ),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    )
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(FILTERS) { f ->
+                            FilterChip(
+                                selected = category == f.key,
+                                onClick = { onCategoryChange(f.key) },
+                                label = { Text(f.label, fontWeight = FontWeight.Bold) },
+                                leadingIcon = { Icon(categoryIcon(f.key), contentDescription = null, modifier = Modifier.size(16.dp)) },
+                                shape = RoundedCornerShape(50),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+            val list = items ?: return@Column
             if (list.isEmpty()) {
                 Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
                     Text(
-                        if (query.isBlank() && category == null) {
-                            "Belum ada screenshot. Coba share screenshot ke aplikasi ini!"
-                        } else {
-                            "Tidak ada hasil."
-                        },
+                        if (query.isBlank() && category == null) "Belum ada screenshot. Coba share screenshot ke aplikasi ini!" else "Tidak ada hasil.",
                         textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             } else {
-                LazyColumn(state = listState) {
-                    items(list, key = { it.id }) { item -> SmartCard(item, onClick = { onOpen(item.id) }) }
+                LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 16.dp)) {
+                    items(list, key = { it.id }) { item -> SmartCard(item, progress[item.id], now, onClick = { onOpen(item.id) }) }
                 }
             }
         }
     }
+}
+
+/** True at the top of the list and while the user scrolls up. */
+@Composable
+private fun LazyListState.isScrollingUp(): Boolean {
+    var previousIndex by remember(this) { mutableIntStateOf(firstVisibleItemIndex) }
+    var previousOffset by remember(this) { mutableIntStateOf(firstVisibleItemScrollOffset) }
+    return remember(this) {
+        derivedStateOf {
+            val up = if (previousIndex != firstVisibleItemIndex) {
+                previousIndex > firstVisibleItemIndex
+            } else {
+                previousOffset >= firstVisibleItemScrollOffset
+            }
+            previousIndex = firstVisibleItemIndex
+            previousOffset = firstVisibleItemScrollOffset
+            up
+        }
+    }.value
 }
