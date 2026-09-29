@@ -25,6 +25,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -37,15 +38,21 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.size.Size
+import com.snapbrain.app.data.ItemEntity
 import com.snapbrain.app.data.ItemRepository
 import com.snapbrain.app.process.ProcessWorker
 import com.snapbrain.core.ExtractJson
 import com.snapbrain.core.ItemStatus
 import com.snapbrain.core.actionOf
 import com.snapbrain.core.categoryLabel
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -54,9 +61,15 @@ import java.io.File
 fun DetailScreen(id: String, repository: ItemRepository, onBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val item by remember(id) { repository.observe(id) }.collectAsState(initial = null)
+    val state by remember(id) { repository.observe(id).map<ItemEntity?, DetailState> { DetailState.Loaded(it) } }
+        .collectAsState(initial = DetailState.Loading)
     BackHandler(onBack = onBack)
-    val current = item ?: return
+    val loaded = state as? DetailState.Loaded ?: return
+    val current = loaded.item
+    if (current == null) {
+        LaunchedEffect(Unit) { onBack() }
+        return
+    }
     val tasks = ExtractJson.decodeTasks(current.tasks)
     val locked = current.tasksTotal - tasks.size
     val info = ExtractJson.decodeInfo(current.extractedInfo).toList()
@@ -127,20 +140,30 @@ private fun LockedTasks(count: Int) {
     }
 }
 
+private sealed interface DetailState {
+    data object Loading : DetailState
+    data class Loaded(val item: ItemEntity?) : DetailState
+}
+
 @Composable
 private fun ZoomableImage(path: String) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
+    var size by remember { mutableStateOf(IntSize.Zero) }
     val state = rememberTransformableState { zoom, pan, _ ->
         scale = (scale * zoom).coerceIn(1f, 5f)
-        offset = if (scale == 1f) Offset.Zero else offset + pan
+        val maxX = (scale - 1f) * size.width / 2f
+        val maxY = (scale - 1f) * size.height / 2f
+        offset = Offset((offset.x + pan.x).coerceIn(-maxX, maxX), (offset.y + pan.y).coerceIn(-maxY, maxY))
     }
+    // Stored copies are <= 2048px; decode at full size so zoomed text stays sharp.
+    val model = ImageRequest.Builder(LocalContext.current).data(File(path)).size(Size.ORIGINAL).build()
     AsyncImage(
-        model = File(path),
+        model = model,
         contentDescription = null,
         contentScale = ContentScale.Fit,
-        modifier = Modifier.fillMaxWidth().height(360.dp).clipToBounds()
+        modifier = Modifier.fillMaxWidth().height(360.dp).clipToBounds().onSizeChanged { size = it }
             .graphicsLayer(scaleX = scale, scaleY = scale, translationX = offset.x, translationY = offset.y)
-            .transformable(state),
+            .transformable(state, canPan = { scale > 1f }),
     )
 }

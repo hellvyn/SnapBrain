@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -17,16 +18,29 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val repository = (application as SnapBrainApp).container.repository
+        val freshStart = savedInstanceState == null
         setContent {
             SnapBrainTheme {
-                LaunchedEffect(Unit) {
-                    repository.requeueQuotaBlocked()
-                    ProcessWorker.enqueue(applicationContext)
+                // Recovery path for items stranded by a dismissed share sheet; skipped on rotation.
+                if (freshStart) {
+                    LaunchedEffect(Unit) {
+                        repository.requeueQuotaBlocked()
+                        ProcessWorker.enqueue(applicationContext)
+                    }
                 }
                 var openId by rememberSaveable { mutableStateOf<String?>(null) }
+                var query by rememberSaveable { mutableStateOf("") }
+                var category by rememberSaveable { mutableStateOf<String?>(null) }
+                val listState = rememberLazyListState()
                 val id = openId
                 if (id == null) {
-                    InboxScreen(repository, onOpen = { openId = it })
+                    InboxScreen(
+                        repository,
+                        query, { query = it },
+                        category, { category = it },
+                        listState,
+                        onOpen = { openId = it },
+                    )
                 } else {
                     DetailScreen(id, repository, onBack = { openId = null })
                 }
