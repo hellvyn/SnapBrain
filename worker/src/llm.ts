@@ -16,7 +16,13 @@ export type ExtractFn = (text: string, ctx: DateContext) => Promise<ExtractData>
 
 export class LlmUnavailable extends Error {}
 
-const TIMEOUT_MS = 25_000;
+// The app waits 60 s for /extract (ExtractClient readTimeout), so both attempts must fit in 55 s.
+const ATTEMPT_MS = 45_000;
+const BUDGET_MS = 55_000;
+const MIN_ATTEMPT_MS = 5_000;
+
+/** Time allowed for the next LLM call after [elapsedMs] of this request; a retry gets only what is left. */
+export const attemptTimeoutMs = (elapsedMs: number): number => Math.min(ATTEMPT_MS, BUDGET_MS - elapsedMs);
 const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 
 export const SYSTEM = `Kamu mengekstrak data terstruktur dari teks OCR sebuah screenshot HP (mayoritas Bahasa Indonesia) supaya pengguna bisa langsung bertindak.
@@ -84,7 +90,10 @@ export function createExtractor(cfg: LlmConfig, fetchFn: typeof fetch = fetch): 
   return async (text, ctx) => {
     let jsonMode = true;
     let lastError = "no valid output";
+    const start = Date.now();
     for (let attempt = 0; attempt < 2; attempt++) {
+      const timeoutMs = attemptTimeoutMs(Date.now() - start);
+      if (timeoutMs < MIN_ATTEMPT_MS) break;
       try {
         const res = await fetchFn(url, {
           method: "POST",
@@ -98,7 +107,7 @@ export function createExtractor(cfg: LlmConfig, fetchFn: typeof fetch = fetch): 
             ],
             ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
           }),
-          signal: AbortSignal.timeout(TIMEOUT_MS),
+          signal: AbortSignal.timeout(timeoutMs),
         });
         if (!res.ok) {
           lastError = `status=${res.status}`;

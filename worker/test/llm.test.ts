@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createExtractor, LlmUnavailable, parseJsonContent, userMessage } from "../src/llm";
+import { attemptTimeoutMs, createExtractor, LlmUnavailable, parseJsonContent, userMessage } from "../src/llm";
 
 const VALID = {
   category: "finance",
@@ -77,5 +77,13 @@ describe("createExtractor", () => {
 describe("parseJsonContent", () => {
   it("returns undefined for non-JSON", () => {
     expect(parseJsonContent("maaf, saya tidak bisa")).toBeUndefined();
+  });
+});
+
+describe("attemptTimeoutMs", () => {
+  it("gives the first attempt 45 s and a retry only what is left of the 55 s budget", () => {
+    expect(attemptTimeoutMs(0)).toBe(45_000);
+    expect(attemptTimeoutMs(30_000)).toBe(25_000);
+    expect(attemptTimeoutMs(52_000)).toBe(3_000); // below the 5 s floor: the caller skips the retry
   });
 });
